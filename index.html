@@ -41,7 +41,6 @@
     color:var(--text);
     font-family:var(--font-body);
     min-height:100vh;
-    padding-bottom:74px; /* room for mobile bottom nav */
   }
   a{color:inherit; text-decoration:none;}
   [lang-bn]{display:none;}
@@ -123,56 +122,35 @@
   }
   .lang-toggle button.active{background:var(--accent); color:var(--accent-ink);}
 
-  /* desktop-only admin link in topbar */
-  .admin-link-desktop{
-    display:none;
-    color:var(--text-dim);
-    font-size:13px;
-    font-weight:600;
-    border:1px solid var(--border);
-    padding:7px 14px;
-    border-radius:8px;
-  }
-  .admin-link-desktop:hover{border-color:var(--accent); color:var(--accent);}
-
-  /* ---------- MOBILE BOTTOM NAV ---------- */
-  .bottom-nav{
-    position:fixed;
-    bottom:0; left:0; right:0;
-    background:#ffffff;
-    border-top:1px solid var(--border);
+  /* ---------- COMPACT TOP NAV (in topbar) ---------- */
+  .top-nav{
     display:flex;
-    z-index:60;
-    padding:8px 10px calc(8px + env(safe-area-inset-bottom));
-    box-shadow:0 -4px 16px rgba(20,30,45,.06);
+    gap:3px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:3px;
   }
-  .bottom-nav button{
-    flex:1;
+  .top-nav button{
     background:transparent;
     border:none;
     color:var(--text-dim);
-    padding:7px 4px;
-    font-size:11px;
+    padding:7px 12px;
+    font-size:12px;
     font-weight:700;
     display:flex;
-    flex-direction:column;
     align-items:center;
-    gap:3px;
+    gap:5px;
     cursor:pointer;
-    border-radius:14px;
-    transition:.15s;
-  }
-  .bottom-nav button .icon{
-    font-size:18px;
-    width:38px; height:26px;
-    display:flex; align-items:center; justify-content:center;
     border-radius:999px;
     transition:.15s;
   }
-  .bottom-nav button.active{color:var(--green-dark);}
-  .bottom-nav button.active .icon{background:#e3f3e9;}
-  .bottom-nav button#navAdmin.active{color:var(--blue-dark);}
-  .bottom-nav button#navAdmin.active .icon{background:#e4ecfb;}
+  .top-nav button .icon{font-size:14px;}
+  .top-nav button.active{background:var(--green); color:#fff;}
+  @media (max-width:480px){
+    .top-nav button span:not(.icon){display:none;}
+    .top-nav button{padding:8px 10px;}
+  }
 
   /* ---------- HERO / SEARCH ---------- */
   .hero{
@@ -465,8 +443,17 @@
       </svg>
       <div class="brand-name"><span class="bn-check">check</span><span class="bn-price">price</span><span class="bn-bd">bd</span><small>BEST PRICE IN BANGLADESH</small></div>
     </div>
-    <div style="display:flex; align-items:center; gap:10px;">
-      <a class="admin-link-desktop" onclick="switchView('admin')">Admin</a>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <nav class="top-nav">
+        <button id="navUser" class="active" onclick="switchView('user')">
+          <span class="icon">🏠</span>
+          <span lang-en>Home</span><span lang-bn>হোম</span>
+        </button>
+        <button id="navAccount" onclick="switchView('account')">
+          <span class="icon">👤</span>
+          <span lang-en>Account</span><span lang-bn>অ্যাকাউন্ট</span>
+        </button>
+      </nav>
       <div class="lang-toggle">
         <button id="langEnBtn" class="active" onclick="setLang('en')">EN</button>
         <button id="langBnBtn" onclick="setLang('bn')">বাং</button>
@@ -560,7 +547,10 @@
   <!-- Logged in: Wishlist view -->
   <div class="container" id="accountLoggedInBox" style="display:none;">
     <div class="wishlist-header">
-      <h2>❤️ <span lang-en>My Wishlist</span><span lang-bn>আমার পছন্দের তালিকা</span></h2>
+      <div>
+        <h2>❤️ <span lang-en>My Wishlist</span><span lang-bn>আমার পছন্দের তালিকা</span></h2>
+        <div id="accountWelcome" style="font-size:12px; color:var(--text-dim); margin-top:3px;"></div>
+      </div>
       <button class="btn btn-secondary btn-sm" onclick="customerLogout()"><span lang-en>Log Out</span><span lang-bn>লগআউট</span></button>
     </div>
     <div id="wishlistGrid" class="grid"></div>
@@ -573,25 +563,6 @@
 
 <!-- ========================= ADMIN PANEL ========================= -->
 <section id="adminSection" class="admin-section">
-
-  <!-- Login -->
-  <div class="login-box" id="loginBox">
-    <h2>🔐 <span lang-en>Admin Login</span><span lang-bn>অ্যাডমিন লগইন</span></h2>
-    <div class="field">
-      <label><span lang-en>Email</span><span lang-bn>ইমেইল</span></label>
-      <input type="email" id="loginEmail" placeholder="admin@example.com">
-    </div>
-    <div class="field">
-      <label><span lang-en>Password</span><span lang-bn>পাসওয়ার্ড</span></label>
-      <input type="password" id="loginPassword" placeholder="••••••••">
-    </div>
-    <button class="btn" onclick="adminLogin()"><span lang-en>Log In</span><span lang-bn>লগইন করুন</span></button>
-    <div id="loginMsg"></div>
-    <p style="font-size:12px; color:var(--text-dim); margin-top:14px;">
-      <span lang-en>New admin? Create a user from the Authentication section in your Supabase dashboard.</span>
-      <span lang-bn>নতুন অ্যাডমিন? Supabase ড্যাশবোর্ডের Authentication সেকশনে গিয়ে ইউজার তৈরি করুন।</span>
-    </p>
-  </div>
 
   <!-- Admin Dashboard -->
   <div class="container" id="adminDashboard" style="display:none;">
@@ -762,22 +733,6 @@
   </div>
 </section>
 
-<!-- ========================= MOBILE BOTTOM NAV ========================= -->
-<nav class="bottom-nav">
-  <button id="navUser" class="active" onclick="switchView('user')">
-    <span class="icon">🏠</span>
-    <span lang-en>Home</span><span lang-bn>হোম</span>
-  </button>
-  <button id="navAccount" onclick="switchView('account')">
-    <span class="icon">👤</span>
-    <span lang-en>Account</span><span lang-bn>অ্যাকাউন্ট</span>
-  </button>
-  <button id="navAdmin" onclick="switchView('admin')">
-    <span class="icon">🔐</span>
-    <span lang-en>Admin</span><span lang-bn>অ্যাডমিন</span>
-  </button>
-</nav>
-
 <script>
 // ============================================
 // SUPABASE CONFIG
@@ -819,8 +774,7 @@ function switchView(view){
   document.getElementById('accountSection').classList.toggle('show', view === 'account');
   document.getElementById('adminSection').classList.toggle('show', view === 'admin');
   document.getElementById('navUser').classList.toggle('active', view === 'user');
-  document.getElementById('navAccount').classList.toggle('active', view === 'account');
-  document.getElementById('navAdmin').classList.toggle('active', view === 'admin');
+  document.getElementById('navAccount').classList.toggle('active', view === 'account' || view === 'admin');
   if(view === 'admin') checkAdminSession();
   if(view === 'account') checkCustomerSession();
 }
@@ -974,7 +928,7 @@ function openProduct(id){
 }
 
 // ============================================
-// ADMIN: AUTH (কাস্টম users টেবিল দিয়ে, Supabase Auth নয়)
+// UNIFIED AUTH (একটাই session, role অনুযায়ী admin/staff বা customer ভিউ)
 // ============================================
 function getSession(){
   try{ return JSON.parse(localStorage.getItem('cpbd_session') || 'null'); }
@@ -982,9 +936,10 @@ function getSession(){
 }
 
 function checkAdminSession(){
+  // এই ফাংশন এখন শুধু একটা গার্ড — সরাসরি অ্যাডমিন ট্যাবে গেলে role চেক করে,
+  // অ্যাডমিন/স্টাফ না হলে Account ভিউতে ফিরিয়ে নেয়।
   const session = getSession();
   if(session && (session.role === 'admin' || session.role === 'staff')){
-    document.getElementById('loginBox').style.display = 'none';
     document.getElementById('adminDashboard').style.display = 'block';
     document.getElementById('adminWelcome').textContent =
       (currentLang === 'bn' ? 'স্বাগতম, ' : 'Welcome, ') + (session.name || session.email) + ` (${session.role})`;
@@ -993,40 +948,13 @@ function checkAdminSession(){
     }
     loadAdminData();
   } else {
-    document.getElementById('loginBox').style.display = 'block';
-    document.getElementById('adminDashboard').style.display = 'none';
+    switchView('account');
   }
-}
-
-async function adminLogin(){
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  const msgEl = document.getElementById('loginMsg');
-  msgEl.innerHTML = '';
-  if(!email || !password){
-    msgEl.innerHTML = '<div class="error-msg">Email and password required</div>'; return;
-  }
-  const { data, error } = await sb.rpc('verify_login', { p_email: email, p_password: password });
-  if(error){
-    msgEl.innerHTML = `<div class="error-msg">Login failed: ${error.message}</div>`;
-    return;
-  }
-  if(!data || data.length === 0){
-    msgEl.innerHTML = '<div class="error-msg">Invalid email or password</div>';
-    return;
-  }
-  const user = data[0];
-  if(user.role !== 'admin' && user.role !== 'staff'){
-    msgEl.innerHTML = '<div class="error-msg">This account does not have admin access</div>';
-    return;
-  }
-  localStorage.setItem('cpbd_session', JSON.stringify(user));
-  checkAdminSession();
 }
 
 function adminLogout(){
   localStorage.removeItem('cpbd_session');
-  checkAdminSession();
+  switchView('account');
 }
 
 // ============================================
@@ -1063,13 +991,8 @@ async function exportToExcel(){
 }
 
 // ============================================
-// CUSTOMER: AUTH (signup_customer / verify_login RPC)
+// ACCOUNT: AUTH (signup_customer / verify_login RPC) — unified for all roles
 // ============================================
-function getCustomerSession(){
-  try{ return JSON.parse(localStorage.getItem('cpbd_customer_session') || 'null'); }
-  catch(e){ return null; }
-}
-
 function switchAuthTab(tab){
   document.getElementById('authTabLogin').classList.toggle('active', tab === 'login');
   document.getElementById('authTabSignup').classList.toggle('active', tab === 'signup');
@@ -1078,10 +1001,17 @@ function switchAuthTab(tab){
 }
 
 function checkCustomerSession(){
-  const session = getCustomerSession();
+  const session = getSession();
+  if(session && (session.role === 'admin' || session.role === 'staff')){
+    // অ্যাডমিন/স্টাফ লগইন করা থাকলে Account ট্যাবে আসলে সরাসরি Admin Dashboard-এ পাঠানো হবে
+    switchView('admin');
+    return;
+  }
   if(session){
     document.getElementById('accountAuthBox').style.display = 'none';
     document.getElementById('accountLoggedInBox').style.display = 'block';
+    document.getElementById('accountWelcome').textContent =
+      (currentLang === 'bn' ? 'স্বাগতম, ' : 'Welcome, ') + (session.name || session.email);
     loadWishlist();
   } else {
     document.getElementById('accountAuthBox').style.display = 'block';
@@ -1109,7 +1039,7 @@ async function customerSignup(){
     return;
   }
   const user = data[0];
-  localStorage.setItem('cpbd_customer_session', JSON.stringify(user));
+  localStorage.setItem('cpbd_session', JSON.stringify(user));
   checkCustomerSession();
 }
 
@@ -1129,12 +1059,17 @@ async function customerLogin(){
   if(!data || data.length === 0){
     msgEl.innerHTML = '<div class="error-msg">Invalid email or password</div>'; return;
   }
-  localStorage.setItem('cpbd_customer_session', JSON.stringify(data[0]));
-  checkCustomerSession();
+  const user = data[0];
+  localStorage.setItem('cpbd_session', JSON.stringify(user));
+  if(user.role === 'admin' || user.role === 'staff'){
+    switchView('admin');
+  } else {
+    checkCustomerSession();
+  }
 }
 
 function customerLogout(){
-  localStorage.removeItem('cpbd_customer_session');
+  localStorage.removeItem('cpbd_session');
   checkCustomerSession();
 }
 
@@ -1142,7 +1077,7 @@ function customerLogout(){
 // CUSTOMER: WISHLIST
 // ============================================
 async function loadWishlist(){
-  const session = getCustomerSession();
+  const session = getSession();
   if(!session) return;
   const { data, error } = await sb.from('wishlist').select('*, products(*)').eq('user_id', session.id);
   const grid = document.getElementById('wishlistGrid');
@@ -1169,7 +1104,7 @@ async function loadWishlist(){
 }
 
 async function toggleWishlist(productId){
-  const session = getCustomerSession();
+  const session = getSession();
   if(!session){
     switchView('account');
     return;
@@ -1184,14 +1119,14 @@ async function toggleWishlist(productId){
 }
 
 async function removeFromWishlist(productId){
-  const session = getCustomerSession();
+  const session = getSession();
   if(!session) return;
   await sb.from('wishlist').delete().eq('user_id', session.id).eq('product_id', productId);
   loadWishlist();
 }
 
 async function isInWishlist(productId){
-  const session = getCustomerSession();
+  const session = getSession();
   if(!session) return false;
   const { data } = await sb.from('wishlist').select('id').eq('user_id', session.id).eq('product_id', productId).maybeSingle();
   return !!data;
