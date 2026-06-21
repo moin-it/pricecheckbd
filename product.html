@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Loading... — Check Price BD</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg:#f7f9fb;
+    --card:#ffffff;
+    --card-hover:#f0f4f8;
+    --border:#e3e8ed;
+    --text:#1a2433;
+    --text-dim:#6b7785;
+    --blue:#1d5fd6;
+    --blue-dark:#1448ad;
+    --green:#1c8a4a;
+    --green-dark:#15703b;
+    --orange:#f5821f;
+    --accent:#1c8a4a;
+    --accent-ink:#ffffff;
+    --price-up:#e0453c;
+    --radius:16px;
+    --font-display:'Manrope', 'Noto Sans Bengali', system-ui, sans-serif;
+    --font-body:'Inter', 'Noto Sans Bengali', system-ui, sans-serif;
+    --shadow-sm:0 1px 3px rgba(20,30,45,.06), 0 1px 2px rgba(20,30,45,.04);
+    --shadow-md:0 4px 14px rgba(20,30,45,.08);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); min-height:100vh;}
+  a{color:inherit; text-decoration:none;}
+  [lang-bn]{display:none;}
+  body.bn [lang-en]{display:none;}
+  body.bn [lang-bn]{display:inline;}
+  body.bn{font-family:'Noto Sans Bengali', var(--font-body);}
+
+  .topbar{
+    background:#fff; border-bottom:1px solid var(--border);
+    padding:12px 16px; position:sticky; top:0; z-index:50; box-shadow:var(--shadow-sm);
+  }
+  .topbar-inner{max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px;}
+  .brand{display:flex; align-items:center; gap:8px;}
+  .brand-mark{width:32px; height:32px; flex-shrink:0;}
+  .brand-name{font-family:var(--font-display); font-weight:800; font-size:17px;}
+  .brand-name .bn-check{color:var(--blue);}
+  .brand-name .bn-price{color:var(--green);}
+  .brand-name .bn-bd{background:var(--orange); color:#fff; font-size:11px; padding:1px 6px; border-radius:5px; margin-left:1px;}
+  .back-link{font-size:13px; font-weight:700; color:var(--blue); display:flex; align-items:center; gap:5px;}
+  .lang-toggle{display:flex; background:var(--bg); border:1px solid var(--border); border-radius:999px; padding:3px;}
+  .lang-toggle button{background:transparent; border:none; color:var(--text-dim); padding:5px 11px; border-radius:999px; cursor:pointer; font-weight:700; font-size:11px;}
+  .lang-toggle button.active{background:var(--accent); color:#fff;}
+
+  .container{max-width:1000px; margin:0 auto; padding:18px 16px 60px;}
+  .loader{text-align:center; padding:80px 20px; color:var(--text-dim);}
+
+  /* ---------- TOP SECTION: gallery + price summary ---------- */
+  .top-grid{display:grid; grid-template-columns:1fr; gap:20px;}
+  @media (min-width:760px){ .top-grid{grid-template-columns:340px 1fr;} }
+
+  .gallery{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; box-shadow:var(--shadow-sm);}
+  .gallery-main{width:100%; height:260px; object-fit:contain; border-radius:10px; background:#f3f6f9; margin-bottom:10px;}
+  .gallery-thumbs{display:flex; gap:8px; overflow-x:auto;}
+  .gallery-thumbs img{
+    width:56px; height:56px; object-fit:cover; border-radius:8px; cursor:pointer;
+    border:2px solid var(--border); flex-shrink:0;
+  }
+  .gallery-thumbs img.active{border-color:var(--green);}
+
+  .product-head h1{font-family:var(--font-display); font-size:22px; font-weight:800; margin-bottom:6px; line-height:1.25;}
+  .product-head .brand-tag{
+    display:inline-block; font-size:11px; font-weight:700; color:var(--blue);
+    text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;
+  }
+  .like-row{display:flex; align-items:center; gap:10px; margin:10px 0 16px;}
+  .like-btn{
+    display:flex; align-items:center; gap:6px; background:var(--card); border:1.5px solid var(--border);
+    padding:8px 16px; border-radius:999px; cursor:pointer; font-size:13px; font-weight:700; color:var(--text-dim);
+  }
+  .like-btn.liked{border-color:var(--price-up); color:var(--price-up); background:#fdf0ee;}
+  .wish-btn{
+    display:flex; align-items:center; gap:6px; background:var(--card); border:1.5px solid var(--border);
+    padding:8px 14px; border-radius:999px; cursor:pointer; font-size:13px; font-weight:700; color:var(--text-dim);
+  }
+  .wish-btn.saved{border-color:var(--orange); color:var(--orange-dark); background:#fef3e8;}
+  .price-summary{
+    background:linear-gradient(135deg, #e9f7ef, #f7f9fb); border:1px solid var(--border);
+    border-radius:14px; padding:16px; margin-bottom:6px;
+  }
+  .price-summary .lowest-label{font-size:12px; color:var(--text-dim); font-weight:600;}
+  .price-summary .lowest-price{font-family:var(--font-display); font-size:30px; font-weight:800; color:var(--green-dark); margin:3px 0 6px;}
+  .price-summary .store-mini{font-size:12.5px; color:var(--text-dim);}
+
+  .specs-row{display:flex; flex-wrap:wrap; gap:6px; margin-top:14px;}
+  .spec-tag{background:var(--card); border:1px solid var(--border); padding:5px 11px; border-radius:8px; font-size:12px; color:var(--text-dim);}
+
+  /* ---------- PRICE COMPARISON TABLE ---------- */
+  .section-title{font-family:var(--font-display); font-size:17px; font-weight:800; margin:28px 0 14px;}
+  .store-price-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--card); border:1px solid var(--border); border-radius:13px; padding:13px 16px; margin-bottom:10px;
+    box-shadow:var(--shadow-sm);
+  }
+  .store-price-row.best{border-color:var(--green); box-shadow:0 0 0 1px var(--green) inset, var(--shadow-sm);}
+  .store-info{display:flex; align-items:center; gap:10px; min-width:0;}
+  .store-info img{width:32px; height:32px; border-radius:8px; flex-shrink:0;}
+  .store-info .sname{font-weight:700; font-size:14px;}
+  .store-info .stock{font-size:11px; color:var(--text-dim);}
+  .store-info .stock.out{color:var(--price-up);}
+  .price-cta{display:flex; align-items:center; gap:12px; flex-shrink:0;}
+  .price-cta .price{font-size:16px; font-weight:800; color:var(--green-dark); font-family:var(--font-display);}
+  .price-cta a{background:var(--green); color:#fff; font-size:12.5px; font-weight:700; padding:9px 16px; border-radius:9px; white-space:nowrap;}
+  .best-badge{background:var(--green); color:#fff; font-size:9px; font-weight:800; padding:2px 7px; border-radius:999px; margin-left:6px;}
+
+  /* ---------- DESCRIPTION ---------- */
+  .description-box{
+    background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px;
+    font-size:14px; line-height:1.7; color:var(--text); box-shadow:var(--shadow-sm);
+  }
+
+  /* ---------- VIDEOS ---------- */
+  .video-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:14px;}
+  .video-card{
+    background:var(--card); border:1px solid var(--border); border-radius:13px; overflow:hidden;
+    box-shadow:var(--shadow-sm); display:block;
+  }
+  .video-thumb{
+    width:100%; height:135px; background:#1a2433; display:flex; align-items:center; justify-content:center;
+    position:relative;
+  }
+  .video-thumb .play-icon{
+    width:46px; height:46px; background:rgba(255,255,255,.92); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--price-up);
+  }
+  .video-title{padding:10px 12px; font-size:13px; font-weight:600;}
+
+  .empty-note{color:var(--text-dim); font-size:13px; padding:10px 0;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="back-link" href="index.html">← <span lang-en>Back to Search</span><span lang-bn>সার্চে ফিরে যান</span></a>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="lang-toggle">
+        <button id="langEnBtn" class="active" onclick="setLang('en')">EN</button>
+        <button id="langBnBtn" onclick="setLang('bn')">বাং</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container" id="loaderBox">
+  <div class="loader"><span lang-en>Loading product...</span><span lang-bn>প্রোডাক্ট লোড হচ্ছে...</span></div>
+</div>
+
+<div class="container" id="contentBox" style="display:none;"></div>
+
+<script>
+const SUPABASE_URL = 'https://kkngaalkvillmgvhakld.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrbmdhYWxrdmlsbG1ndmhha2xkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NTgyMDUsImV4cCI6MjA5NzUzNDIwNX0.Xucfdn3NKCcoj46JtyAzzMuISL5BW8LoWBq6blBPCHI';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentLang = 'en';
+let product = null;
+let prices = [];
+let videos = [];
+let likeCount = 0;
+let userLiked = false;
+let userWished = false;
+
+function setLang(lang){
+  currentLang = lang;
+  document.body.classList.toggle('bn', lang === 'bn');
+  document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
+  document.getElementById('langBnBtn').classList.toggle('active', lang === 'bn');
+  if(product) renderProduct();
+}
+
+function getCustomerSession(){
+  try{ return JSON.parse(localStorage.getItem('cpbd_customer_session') || 'null'); }
+  catch(e){ return null; }
+}
+
+function getParam(name){
+  return new URLSearchParams(window.location.search).get(name);
+}
+
+function selectThumb(url, el){
+  document.getElementById('galleryMain').src = url;
+  document.querySelectorAll('.gallery-thumbs img').forEach(img => img.classList.remove('active'));
+  if(el) el.classList.add('active');
+}
+
+function youtubeId(url){
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
+async function loadProduct(){
+  const id = getParam('id');
+  if(!id){
+    document.getElementById('loaderBox').innerHTML = '<div class="loader">Product not found. Missing ID.</div>';
+    return;
+  }
+
+  const { data: p, error: pErr } = await sb.from('products').select('*').eq('id', id).single();
+  if(pErr || !p){
+    document.getElementById('loaderBox').innerHTML = '<div class="loader">Product not found.</div>';
+    return;
+  }
+  product = p;
+
+  const { data: pr } = await sb.from('prices').select('*, stores(name, logo_url)').eq('product_id', id);
+  prices = pr || [];
+
+  const { data: vids } = await sb.from('product_videos').select('*').eq('product_id', id);
+  videos = vids || [];
+
+  const { count } = await sb.from('product_likes').select('*', { count: 'exact', head: true }).eq('product_id', id);
+  likeCount = count || 0;
+
+  const session = getCustomerSession();
+  if(session){
+    const { data: existing } = await sb.from('product_likes').select('id').eq('product_id', id).eq('user_id', session.id).maybeSingle();
+    userLiked = !!existing;
+    const { data: wishExisting } = await sb.from('wishlist').select('id').eq('product_id', id).eq('user_id', session.id).maybeSingle();
+    userWished = !!wishExisting;
+  }
+
+  document.title = `${p.name} — Check Price BD`;
+  document.getElementById('loaderBox').style.display = 'none';
+  document.getElementById('contentBox').style.display = 'block';
+  renderProduct();
+}
+
+function renderProduct(){
+  const p = product;
+  const sorted = [...prices].sort((a,b) => a.price - b.price);
+  const minPrice = sorted.length ? sorted[0].price : null;
+  const minStore = sorted.length ? sorted[0].stores?.name : null;
+  const images = (p.images && p.images.length) ? p.images : (p.image_url ? [p.image_url] : []);
+  const mainImg = images[0] || 'https://via.placeholder.com/400x300?text=No+Image';
+
+  const bestLabel = currentLang === 'bn' ? 'সর্বনিম্ন' : 'Best price';
+  const inStockLabel = currentLang === 'bn' ? '✓ স্টকে আছে' : '✓ In stock';
+  const outStockLabel = currentLang === 'bn' ? '✕ স্টকে নেই' : '✕ Out of stock';
+  const viewLabel = currentLang === 'bn' ? 'দেখুন →' : 'View Deal →';
+  const noPriceLabel = currentLang === 'bn' ? 'এই প্রোডাক্টের জন্য কোনো দাম এন্ট্রি নেই।' : 'No price entries for this product yet.';
+  const lowestLabel = currentLang === 'bn' ? 'সর্বনিম্ন দাম' : 'Lowest Price';
+  const availableAtLabel = currentLang === 'bn' ? 'এর কাছে পাওয়া যাচ্ছে' : 'available at';
+  const descLabel = currentLang === 'bn' ? 'বিস্তারিত বর্ণনা' : 'Description';
+  const specsLabel = currentLang === 'bn' ? 'স্পেসিফিকেশন' : 'Specifications';
+  const compareLabel = currentLang === 'bn' ? 'সব শপের দাম তুলনা' : 'Price Comparison';
+  const videosLabel = currentLang === 'bn' ? 'ভিডিও রিভিউ' : 'Video Reviews';
+  const noVideoLabel = currentLang === 'bn' ? 'এই প্রোডাক্টের জন্য কোনো ভিডিও নেই।' : 'No videos added for this product yet.';
+
+  const thumbsHtml = images.map((img, i) => `<img src="${img}" class="${i===0?'active':''}" onclick="selectThumb('${img}', this)">`).join('');
+
+  const specsHtml = p.specs && Object.keys(p.specs).length ?
+    `<div class="specs-row">${Object.entries(p.specs).map(([k,v]) => `<span class="spec-tag"><b>${k}:</b> ${v}</span>`).join('')}</div>` : '';
+
+  const storesHtml = sorted.length ? sorted.map(pr => `
+    <div class="store-price-row ${pr.price === minPrice ? 'best' : ''}">
+      <div class="store-info">
+        <img src="${pr.stores?.logo_url || ''}" alt="">
+        <div>
+          <div class="sname">${pr.stores?.name || 'Unknown'} ${pr.price === minPrice ? `<span class="best-badge">${bestLabel}</span>` : ''}</div>
+          <div class="stock ${pr.in_stock ? '' : 'out'}">${pr.in_stock ? inStockLabel : outStockLabel}</div>
+        </div>
+      </div>
+      <div class="price-cta">
+        <span class="price">৳${pr.price.toLocaleString('en-BD')}</span>
+        <a href="${pr.product_url}" target="_blank" rel="noopener">${viewLabel}</a>
+      </div>
+    </div>
+  `).join('') : `<p class="empty-note">${noPriceLabel}</p>`;
+
+  const videosHtml = videos.length ? `<div class="video-grid">${videos.map(v => {
+    const yid = youtubeId(v.video_url);
+    const thumbUrl = yid ? `https://img.youtube.com/vi/${yid}/mqdefault.jpg` : '';
+    return `
+      <a class="video-card" href="${v.video_url}" target="_blank" rel="noopener">
+        <div class="video-thumb" style="${thumbUrl ? `background-image:url('${thumbUrl}'); background-size:cover; background-position:center;` : ''}">
+          <div class="play-icon">▶</div>
+        </div>
+        <div class="video-title">${v.title || 'Watch Video'}</div>
+      </a>`;
+  }).join('')}</div>` : `<p class="empty-note">${noVideoLabel}</p>`;
+
+  document.getElementById('contentBox').innerHTML = `
+    <div class="top-grid">
+      <div class="gallery">
+        <img id="galleryMain" class="gallery-main" src="${mainImg}" alt="${p.name}">
+        <div class="gallery-thumbs">${thumbsHtml}</div>
+      </div>
+      <div class="product-head">
+        <div class="brand-tag">${p.brand || ''}</div>
+        <h1>${p.name}</h1>
+        ${specsHtml}
+        <div class="like-row">
+          <button class="like-btn ${userLiked ? 'liked' : ''}" id="likeBtn" onclick="toggleLike()">
+            <span>${userLiked ? '❤️' : '🤍'}</span>
+            <span id="likeCountLabel">${likeCount}</span>
+            <span lang-en>Like</span><span lang-bn>লাইক</span>
+          </button>
+          <button class="wish-btn ${userWished ? 'saved' : ''}" id="wishBtn" onclick="toggleWish()">
+            <span id="wishIcon">${userWished ? '🔖' : '📑'}</span>
+            <span lang-en>${userWished ? 'Saved' : 'Save'}</span><span lang-bn>${userWished ? 'সেভ করা' : 'সেভ করুন'}</span>
+          </button>
+        </div>
+        ${sorted.length ? `
+        <div class="price-summary">
+          <div class="lowest-label">${lowestLabel}</div>
+          <div class="lowest-price">৳${minPrice.toLocaleString('en-BD')}</div>
+          <div class="store-mini">${minStore} ${availableAtLabel}</div>
+        </div>` : ''}
+      </div>
+    </div>
+
+    <div class="section-title">${compareLabel}</div>
+    ${storesHtml}
+
+    ${p.description ? `
+    <div class="section-title">${descLabel}</div>
+    <div class="description-box">${p.description}</div>` : ''}
+
+    <div class="section-title">${videosLabel}</div>
+    ${videosHtml}
+  `;
+}
+
+async function toggleLike(){
+  const session = getCustomerSession();
+  if(!session){
+    alert(currentLang === 'bn' ? 'লাইক দেওয়ার জন্য অনুগ্রহ করে লগইন করুন।' : 'Please log in to like this product.');
+    window.location.href = 'index.html?view=account';
+    return;
+  }
+  const btn = document.getElementById('likeBtn');
+  btn.disabled = true;
+  if(userLiked){
+    await sb.from('product_likes').delete().eq('product_id', product.id).eq('user_id', session.id);
+    userLiked = false;
+    likeCount = Math.max(0, likeCount - 1);
+  } else {
+    await sb.from('product_likes').insert({ product_id: product.id, user_id: session.id });
+    userLiked = true;
+    likeCount += 1;
+  }
+  btn.classList.toggle('liked', userLiked);
+  btn.querySelector('span').textContent = userLiked ? '❤️' : '🤍';
+  document.getElementById('likeCountLabel').textContent = likeCount;
+  btn.disabled = false;
+}
+
+async function toggleWish(){
+  const session = getCustomerSession();
+  if(!session){
+    alert(currentLang === 'bn' ? 'সেভ করার জন্য অনুগ্রহ করে লগইন করুন।' : 'Please log in to save this product.');
+    window.location.href = 'index.html?view=account';
+    return;
+  }
+  const btn = document.getElementById('wishBtn');
+  btn.disabled = true;
+  if(userWished){
+    await sb.from('wishlist').delete().eq('product_id', product.id).eq('user_id', session.id);
+    userWished = false;
+  } else {
+    await sb.from('wishlist').insert({ product_id: product.id, user_id: session.id });
+    userWished = true;
+  }
+  btn.classList.toggle('saved', userWished);
+  document.getElementById('wishIcon').textContent = userWished ? '🔖' : '📑';
+  btn.querySelectorAll('[lang-en],[lang-bn]').forEach(el => {
+    if(el.hasAttribute('lang-en')) el.textContent = userWished ? 'Saved' : 'Save';
+    if(el.hasAttribute('lang-bn')) el.textContent = userWished ? 'সেভ করা' : 'সেভ করুন';
+  });
+  btn.disabled = false;
+}
+
+loadProduct();
+</script>
+</body>
+</html>

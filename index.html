@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Check Price BD — Compare Gadget Prices in Bangladesh</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg:#f7f9fb;
+    --bg-soft:#ffffff;
+    --card:#ffffff;
+    --card-hover:#f0f4f8;
+    --border:#e3e8ed;
+    --text:#1a2433;
+    --text-dim:#6b7785;
+    --blue:#1d5fd6;
+    --blue-dark:#1448ad;
+    --green:#1c8a4a;
+    --green-dark:#15703b;
+    --orange:#f5821f;
+    --orange-dark:#d96c0f;
+    --accent:#1c8a4a;
+    --accent-ink:#ffffff;
+    --price-up:#e0453c;
+    --price-down:#1c8a4a;
+    --gold:#f5821f;
+    --radius:16px;
+    --font-display:'Manrope', 'Noto Sans Bengali', system-ui, sans-serif;
+    --font-body:'Inter', 'Noto Sans Bengali', system-ui, sans-serif;
+    --shadow-sm:0 1px 3px rgba(20,30,45,.06), 0 1px 2px rgba(20,30,45,.04);
+    --shadow-md:0 4px 14px rgba(20,30,45,.08);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{-webkit-tap-highlight-color:transparent;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+    padding-bottom:74px; /* room for mobile bottom nav */
+  }
+  a{color:inherit; text-decoration:none;}
+  [lang-bn]{display:none;}
+  body.bn [lang-en]{display:none;}
+  body.bn [lang-bn]{display:inline;}
+  body.bn{font-family:'Noto Sans Bengali', var(--font-body);}
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    background:#ffffff;
+    border-bottom:1px solid var(--border);
+    padding:12px 16px;
+    position:sticky;
+    top:0;
+    z-index:50;
+    box-shadow:var(--shadow-sm);
+  }
+  .topbar-inner{
+    max-width:1100px;
+    margin:0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .brand-mark{
+    width:36px; height:36px;
+    flex-shrink:0;
+  }
+  .brand-name{
+    font-family:var(--font-display);
+    font-weight:800;
+    font-size:19px;
+    letter-spacing:-0.3px;
+    line-height:1;
+  }
+  .brand-name .bn-check{color:var(--blue);}
+  .brand-name .bn-price{color:var(--green);}
+  .brand-name .bn-bd{
+    background:var(--orange);
+    color:#fff;
+    font-size:12px;
+    padding:1px 6px;
+    border-radius:5px;
+    margin-left:1px;
+    vertical-align:2px;
+  }
+  .brand-name small{
+    display:block;
+    font-size:10px;
+    color:var(--text-dim);
+    font-weight:600;
+    letter-spacing:.5px;
+    margin-top:2px;
+  }
+  .lang-toggle{
+    display:flex;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:3px;
+    font-size:12px;
+    font-weight:700;
+  }
+  .lang-toggle button{
+    background:transparent;
+    border:none;
+    color:var(--text-dim);
+    padding:6px 12px;
+    border-radius:999px;
+    cursor:pointer;
+    font-weight:700;
+    font-size:12px;
+  }
+  .lang-toggle button.active{background:var(--accent); color:var(--accent-ink);}
+
+  /* desktop-only admin link in topbar */
+  .admin-link-desktop{
+    display:none;
+    color:var(--text-dim);
+    font-size:13px;
+    font-weight:600;
+    border:1px solid var(--border);
+    padding:7px 14px;
+    border-radius:8px;
+  }
+  .admin-link-desktop:hover{border-color:var(--accent); color:var(--accent);}
+
+  /* ---------- MOBILE BOTTOM NAV ---------- */
+  .bottom-nav{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    background:#ffffff;
+    border-top:1px solid var(--border);
+    display:flex;
+    z-index:60;
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+    box-shadow:0 -4px 16px rgba(20,30,45,.06);
+  }
+  .bottom-nav button{
+    flex:1;
+    background:transparent;
+    border:none;
+    color:var(--text-dim);
+    padding:7px 4px;
+    font-size:11px;
+    font-weight:700;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    cursor:pointer;
+    border-radius:14px;
+    transition:.15s;
+  }
+  .bottom-nav button .icon{
+    font-size:18px;
+    width:38px; height:26px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:999px;
+    transition:.15s;
+  }
+  .bottom-nav button.active{color:var(--green-dark);}
+  .bottom-nav button.active .icon{background:#e3f3e9;}
+  .bottom-nav button#navAdmin.active{color:var(--blue-dark);}
+  .bottom-nav button#navAdmin.active .icon{background:#e4ecfb;}
+
+  /* ---------- HERO / SEARCH ---------- */
+  .hero{
+    padding:22px 16px 18px;
+    max-width:1100px;
+    margin:0 auto;
+  }
+  .hero h1{
+    font-family:var(--font-display);
+    font-size:21px;
+    font-weight:800;
+    letter-spacing:-0.3px;
+    margin-bottom:4px;
+  }
+  .hero p{
+    color:var(--text-dim);
+    font-size:13px;
+    margin-bottom:16px;
+  }
+  .search-box{
+    display:flex;
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:14px;
+    padding:4px 4px 4px 14px;
+    align-items:center;
+    gap:8px;
+  }
+  .search-box:focus-within{border-color:var(--accent);}
+  .search-box .icon{color:var(--text-dim); font-size:16px;}
+  .search-box input{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:var(--text);
+    font-size:15px;
+    padding:13px 0;
+    font-family:var(--font-body);
+  }
+  body.bn .search-box input{font-family:'Noto Sans Bengali';}
+  .search-box input::placeholder{color:var(--text-dim);}
+  .search-box button{
+    background:var(--accent);
+    color:var(--accent-ink);
+    border:none;
+    padding:12px 20px;
+    border-radius:11px;
+    font-weight:700;
+    cursor:pointer;
+    font-size:14px;
+    font-family:var(--font-display);
+    flex-shrink:0;
+  }
+
+  .search-suggestions{
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0; right:0;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    box-shadow:var(--shadow-md);
+    z-index:40;
+    max-height:320px;
+    overflow-y:auto;
+    display:none;
+  }
+  .search-suggestions.show{display:block;}
+  .suggestion-item{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 14px;
+    cursor:pointer;
+    border-bottom:1px solid var(--border);
+  }
+  .suggestion-item:last-child{border-bottom:none;}
+  .suggestion-item:hover{background:var(--card-hover);}
+  .suggestion-item img{width:34px; height:34px; object-fit:cover; border-radius:7px; background:#eef2f6; flex-shrink:0;}
+  .suggestion-item .s-name{font-size:13.5px; font-weight:600;}
+  .suggestion-item .s-brand{font-size:11px; color:var(--text-dim);}
+  .suggestion-empty{padding:14px; font-size:13px; color:var(--text-dim); text-align:center;}
+
+  .container{max-width:1100px; margin:0 auto; padding:0 16px 40px;}
+
+  /* ---------- CATEGORY CHIPS ---------- */
+  .chips{
+    display:flex; gap:8px; overflow-x:auto; margin:16px 0 18px;
+    -ms-overflow-style:none; scrollbar-width:none;
+    padding-bottom:2px;
+  }
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    padding:8px 16px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .chip.active{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+  .chips-brand{margin-top:-4px;}
+  .brand-chip{font-size:12px; padding:6px 13px; background:transparent;}
+  .brand-chip.active{background:var(--blue); border-color:var(--blue); color:#fff;}
+
+  /* ---------- PRODUCT GRID ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:12px;
+  }
+  @media (min-width:560px){ .grid{grid-template-columns:repeat(3, 1fr);} }
+  @media (min-width:860px){ .grid{grid-template-columns:repeat(4, 1fr);} }
+
+  .product-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:12px;
+    cursor:pointer;
+    position:relative;
+    box-shadow:var(--shadow-sm);
+    transition:box-shadow .15s, transform .15s;
+  }
+  .product-card:active{background:var(--card-hover); transform:scale(.98);}
+  .product-card:hover{box-shadow:var(--shadow-md);}
+  .product-card img{
+    width:100%;
+    height:108px;
+    object-fit:cover;
+    border-radius:10px;
+    margin-bottom:10px;
+    background:#eef2f6;
+  }
+  .product-card .brand{
+    font-size:10px;
+    color:var(--accent);
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+  }
+  .product-card h3{
+    font-size:13.5px;
+    margin:3px 0 8px;
+    line-height:1.3;
+    font-weight:600;
+    min-height:35px;
+  }
+  .price-range{font-size:11.5px; color:var(--text-dim);}
+  .price-range b{
+    color:var(--accent);
+    font-size:15px;
+    font-family:var(--font-display);
+    display:block;
+    margin-top:1px;
+  }
+  .store-count{
+    font-size:10.5px;
+    color:var(--gold);
+    margin-top:6px;
+    font-weight:600;
+  }
+
+  /* ---------- ADMIN PANEL ---------- */
+  .admin-section{display:none;}
+  .admin-section.show{display:block;}
+
+  /* ---------- ACCOUNT (CUSTOMER) PANEL ---------- */
+  .account-section{display:none;}
+  .account-section.show{display:block;}
+  .auth-tabs{display:flex; gap:8px; max-width:380px; margin:24px auto 0; padding:0 16px;}
+  .auth-tab{
+    flex:1; background:var(--card); border:1px solid var(--border); color:var(--text-dim);
+    padding:10px 0; border-radius:10px; cursor:pointer; font-size:13px; font-weight:700;
+  }
+  .auth-tab.active{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+  .wishlist-header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding-top:18px; margin-bottom:16px;
+  }
+  .wishlist-header h2{font-family:var(--font-display); font-size:19px;}
+  .remove-wish-btn{
+    background:rgba(255,107,91,.15); color:var(--price-up); border:none;
+    width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:14px; flex-shrink:0;
+  }
+  .login-box{
+    max-width:380px; margin:50px auto 0;
+    background:var(--card); border:1px solid var(--border);
+    border-radius:16px; padding:28px 22px;
+  }
+  .login-box h2{margin-bottom:18px; font-size:19px; font-family:var(--font-display);}
+  .field{margin-bottom:14px;}
+  .field label{font-size:13px; color:var(--text-dim); display:block; margin-bottom:6px; font-weight:600;}
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--bg); border:1px solid var(--border);
+    color:var(--text); padding:11px 12px; border-radius:9px; font-size:14px;
+    outline:none; font-family:inherit;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--accent);}
+  .btn{
+    background:var(--accent); color:var(--accent-ink); border:none; padding:12px 20px;
+    border-radius:10px; font-weight:700; cursor:pointer; font-size:14px; width:100%;
+    font-family:var(--font-display);
+  }
+  .btn-sm{padding:8px 14px; font-size:12px; width:auto; border-radius:8px;}
+  .btn-secondary{background:var(--card); color:var(--text); border:1px solid var(--border);}
+  .btn-danger{background:var(--price-up); color:white;}
+  .error-msg{color:var(--price-up); font-size:13px; margin-top:8px;}
+  .success-msg{color:var(--accent); font-size:13px; margin-top:8px;}
+
+  .admin-header{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:20px; flex-wrap:wrap; gap:10px; padding-top:18px;
+  }
+  .admin-header h2{font-family:var(--font-display); font-size:19px;}
+  .admin-tabs{display:flex; gap:7px; margin-bottom:18px; overflow-x:auto;}
+  .admin-tab{
+    background:var(--card); border:1px solid var(--border); color:var(--text-dim);
+    padding:9px 16px; border-radius:9px; cursor:pointer; font-size:13px; font-weight:700;
+    white-space:nowrap;
+  }
+  .admin-tab.active{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+  .admin-panel-body{display:none;}
+  .admin-panel-body.show{display:block;}
+
+  .data-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .data-table th{
+    text-align:left; padding:10px 12px; color:var(--text-dim);
+    border-bottom:1px solid var(--border); font-weight:700; white-space:nowrap;
+  }
+  .data-table td{padding:10px 12px; border-bottom:1px solid var(--border); white-space:nowrap;}
+  .table-wrap{
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; overflow-x:auto; padding:4px;
+  }
+  .form-card{
+    background:var(--card); border:1px solid var(--border);
+    border-radius:16px; padding:18px; margin-bottom:18px;
+  }
+  .form-card h3{margin-bottom:14px; font-size:15px; font-family:var(--font-display);}
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .form-grid .full{grid-column:1/-1;}
+  @media (max-width:560px){ .form-grid{grid-template-columns:1fr;} }
+  .dyn-row{display:flex; gap:8px; margin-bottom:8px; align-items:center;}
+  .dyn-row input{flex:1; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:9px 11px; border-radius:8px; font-size:13px; outline:none;}
+  .dyn-row input:focus{border-color:var(--accent);}
+  .dyn-remove{
+    background:#fdf0ee; color:var(--price-up); border:none; width:30px; height:30px;
+    border-radius:8px; cursor:pointer; font-size:14px; flex-shrink:0;
+  }
+  .actions-cell{display:flex; gap:6px;}
+  .badge-stock{font-size:11px; padding:3px 9px; border-radius:999px; font-weight:700;}
+  .badge-in{background:rgba(61,220,132,.15); color:var(--accent);}
+  .badge-out{background:rgba(255,107,91,.15); color:var(--price-up);}
+
+  .empty-state{text-align:center; padding:50px 20px; color:var(--text-dim); font-size:14px;}
+  .loader{text-align:center; padding:40px; color:var(--text-dim); font-size:13px;}
+
+  /* ---------- FOOTER ---------- */
+  footer{
+    max-width:1100px; margin:30px auto 0; padding:24px 16px 16px;
+    border-top:1px solid var(--border);
+    text-align:center;
+  }
+  .footer-credit{
+    font-size:12.5px; color:var(--text-dim); line-height:1.7;
+  }
+  .footer-credit strong{color:var(--text); font-weight:700;}
+  .footer-credit .wa-link{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--accent); font-weight:700; margin-top:6px;
+    border:1px solid var(--border); padding:8px 16px; border-radius:999px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========================= TOP BAR ========================= -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="14" fill="none" stroke="var(--blue)" stroke-width="4.5"/>
+        <path d="M30 30 L41 41" stroke="var(--blue)" stroke-width="5" stroke-linecap="round"/>
+        <path d="M13 21 L17 25 L27 13" stroke="var(--green)" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="20" cy="20" r="3" fill="var(--orange)"/>
+      </svg>
+      <div class="brand-name"><span class="bn-check">check</span><span class="bn-price">price</span><span class="bn-bd">bd</span><small>BEST PRICE IN BANGLADESH</small></div>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <a class="admin-link-desktop" onclick="switchView('admin')">Admin</a>
+      <div class="lang-toggle">
+        <button id="langEnBtn" class="active" onclick="setLang('en')">EN</button>
+        <button id="langBnBtn" onclick="setLang('bn')">বাং</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= USER PANEL ========================= -->
+<section id="userSection">
+  <div class="hero">
+    <h1><span lang-en>Find the best price, every time</span><span lang-bn>সবচেয়ে কম দাম খুঁজুন</span></h1>
+    <p><span lang-en>Compare prices across Bangladesh's top gadget shops in one place.</span><span lang-bn>বাংলাদেশের শীর্ষ গ্যাজেট শপগুলোর দাম একসাথে তুলনা করুন।</span></p>
+    <div class="search-wrapper" style="position:relative;">
+      <div class="search-box">
+        <span class="icon">🔍</span>
+        <input id="searchInput" type="text" placeholder="Search a phone... e.g. Realme Narzo 60" autocomplete="off">
+        <button onclick="searchProducts()"><span lang-en>Search</span><span lang-bn>খুঁজুন</span></button>
+      </div>
+      <div id="searchSuggestions" class="search-suggestions"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="chips" id="categoryChips"></div>
+    <div class="chips chips-brand" id="brandChips"></div>
+    <div id="productGrid" class="grid"></div>
+    <div id="userEmptyState" class="empty-state" style="display:none;">
+      <span lang-en>No products found. Try a different search.</span>
+      <span lang-bn>কোনো প্রোডাক্ট পাওয়া যায়নি। অন্য নামে চেষ্টা করুন।</span>
+    </div>
+    <div id="userLoader" class="loader">
+      <span lang-en>Loading prices...</span><span lang-bn>ডাটা লোড হচ্ছে...</span>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-credit">
+      <span lang-en>Developed &amp; maintained by</span><span lang-bn>ডেভেলপ ও মেইনটেইন করেছে</span><br>
+      <strong>Moin IT Solution</strong><br>
+      <a class="wa-link" href="https://wa.me/8801707313290" target="_blank" rel="noopener">
+        💬 WhatsApp: 01707313290
+      </a>
+    </div>
+  </footer>
+</section>
+
+<!-- ========================= ACCOUNT (CUSTOMER) PANEL ========================= -->
+<section id="accountSection" class="account-section">
+
+  <!-- Logged out: Login/Signup forms -->
+  <div id="accountAuthBox">
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="authTabLogin" onclick="switchAuthTab('login')"><span lang-en>Log In</span><span lang-bn>লগইন</span></button>
+      <button class="auth-tab" id="authTabSignup" onclick="switchAuthTab('signup')"><span lang-en>Sign Up</span><span lang-bn>সাইনআপ</span></button>
+    </div>
+
+    <div class="login-box" id="customerLoginBox">
+      <h2>👤 <span lang-en>Welcome Back</span><span lang-bn>স্বাগতম</span></h2>
+      <div class="field">
+        <label><span lang-en>Email</span><span lang-bn>ইমেইল</span></label>
+        <input type="email" id="custLoginEmail" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label><span lang-en>Password</span><span lang-bn>পাসওয়ার্ড</span></label>
+        <input type="password" id="custLoginPassword" placeholder="••••••••">
+      </div>
+      <button class="btn" onclick="customerLogin()"><span lang-en>Log In</span><span lang-bn>লগইন করুন</span></button>
+      <div id="custLoginMsg"></div>
+    </div>
+
+    <div class="login-box" id="customerSignupBox" style="display:none;">
+      <h2>✨ <span lang-en>Create Account</span><span lang-bn>অ্যাকাউন্ট তৈরি করুন</span></h2>
+      <div class="field">
+        <label><span lang-en>Name</span><span lang-bn>নাম</span></label>
+        <input type="text" id="custSignupName" placeholder="Your name">
+      </div>
+      <div class="field">
+        <label><span lang-en>Email</span><span lang-bn>ইমেইল</span></label>
+        <input type="email" id="custSignupEmail" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label><span lang-en>Password</span><span lang-bn>পাসওয়ার্ড</span></label>
+        <input type="password" id="custSignupPassword" placeholder="At least 6 characters">
+      </div>
+      <button class="btn" onclick="customerSignup()"><span lang-en>Sign Up</span><span lang-bn>সাইনআপ করুন</span></button>
+      <div id="custSignupMsg"></div>
+    </div>
+  </div>
+
+  <!-- Logged in: Wishlist view -->
+  <div class="container" id="accountLoggedInBox" style="display:none;">
+    <div class="wishlist-header">
+      <h2>❤️ <span lang-en>My Wishlist</span><span lang-bn>আমার পছন্দের তালিকা</span></h2>
+      <button class="btn btn-secondary btn-sm" onclick="customerLogout()"><span lang-en>Log Out</span><span lang-bn>লগআউট</span></button>
+    </div>
+    <div id="wishlistGrid" class="grid"></div>
+    <div id="wishlistEmpty" class="empty-state" style="display:none;">
+      <span lang-en>No items saved yet. Tap the heart on any product to save it here.</span>
+      <span lang-bn>এখনো কিছু সেভ করা হয়নি। কোনো প্রোডাক্টে হার্ট আইকনে ট্যাপ করে এখানে সেভ করুন।</span>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= ADMIN PANEL ========================= -->
+<section id="adminSection" class="admin-section">
+
+  <!-- Login -->
+  <div class="login-box" id="loginBox">
+    <h2>🔐 <span lang-en>Admin Login</span><span lang-bn>অ্যাডমিন লগইন</span></h2>
+    <div class="field">
+      <label><span lang-en>Email</span><span lang-bn>ইমেইল</span></label>
+      <input type="email" id="loginEmail" placeholder="admin@example.com">
+    </div>
+    <div class="field">
+      <label><span lang-en>Password</span><span lang-bn>পাসওয়ার্ড</span></label>
+      <input type="password" id="loginPassword" placeholder="••••••••">
+    </div>
+    <button class="btn" onclick="adminLogin()"><span lang-en>Log In</span><span lang-bn>লগইন করুন</span></button>
+    <div id="loginMsg"></div>
+    <p style="font-size:12px; color:var(--text-dim); margin-top:14px;">
+      <span lang-en>New admin? Create a user from the Authentication section in your Supabase dashboard.</span>
+      <span lang-bn>নতুন অ্যাডমিন? Supabase ড্যাশবোর্ডের Authentication সেকশনে গিয়ে ইউজার তৈরি করুন।</span>
+    </p>
+  </div>
+
+  <!-- Admin Dashboard -->
+  <div class="container" id="adminDashboard" style="display:none;">
+    <div class="admin-header">
+      <div>
+        <h2><span lang-en>Admin Dashboard</span><span lang-bn>অ্যাডমিন ড্যাশবোর্ড</span></h2>
+        <div id="adminWelcome" style="font-size:12px; color:var(--text-dim); margin-top:3px;"></div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="exportToExcel()">📊 <span lang-en>Download Excel</span><span lang-bn>এক্সেল ডাউনলোড</span></button>
+        <button class="btn btn-secondary btn-sm" onclick="adminLogout()"><span lang-en>Log Out</span><span lang-bn>লগআউট</span></button>
+      </div>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" onclick="switchAdminTab('products')"><span lang-en>Products</span><span lang-bn>প্রোডাক্ট</span></button>
+      <button class="admin-tab" onclick="switchAdminTab('prices')"><span lang-en>Prices</span><span lang-bn>দাম</span></button>
+      <button class="admin-tab" onclick="switchAdminTab('stores')"><span lang-en>Stores</span><span lang-bn>শপ/স্টোর</span></button>
+      <button class="admin-tab" onclick="switchAdminTab('users')"><span lang-en>Staff/Users</span><span lang-bn>স্টাফ/ইউজার</span></button>
+    </div>
+
+    <!-- PRODUCTS TAB -->
+    <div class="admin-panel-body show" id="tab-products">
+      <div class="form-card">
+        <h3 id="productFormTitle">➕ <span lang-en>Add New Product</span><span lang-bn>নতুন প্রোডাক্ট যুক্ত করুন</span></h3>
+        <input type="hidden" id="productEditId">
+        <div class="form-grid">
+          <div class="field"><label><span lang-en>Product Name</span><span lang-bn>প্রোডাক্টের নাম</span></label><input id="pName" placeholder="Realme Narzo 60"></div>
+          <div class="field"><label><span lang-en>Brand</span><span lang-bn>ব্র্যান্ড</span></label><input id="pBrand" placeholder="Realme"></div>
+          <div class="field"><label><span lang-en>Category</span><span lang-bn>ক্যাটাগরি</span></label>
+            <select id="pCategory">
+              <option value="smartphone">Smartphone</option>
+              <option value="laptop">Laptop</option>
+              <option value="tablet">Tablet</option>
+              <option value="accessories">Accessories</option>
+            </select>
+          </div>
+          <div class="field"><label><span lang-en>Model Slug (unique, lowercase, dashes)</span><span lang-bn>Model Slug (ইউনিক, ছোট হাতের)</span></label><input id="pSlug" placeholder="realme-narzo-60"></div>
+        </div>
+
+        <div class="field full" style="margin-top:12px;">
+          <label><span lang-en>Image URLs (gallery — add multiple)</span><span lang-bn>ছবির URL (গ্যালারি — একাধিক যুক্ত করুন)</span></label>
+          <div id="pImagesList"></div>
+          <button type="button" class="btn btn-secondary btn-sm" style="margin-top:6px;" onclick="addImageField()">+ <span lang-en>Add Image</span><span lang-bn>ছবি যুক্ত করুন</span></button>
+        </div>
+
+        <div class="field full" style="margin-top:12px;">
+          <label><span lang-en>Description</span><span lang-bn>বিস্তারিত বর্ণনা</span></label>
+          <textarea id="pDescription" rows="4" placeholder="Write a detailed description of this product..."></textarea>
+        </div>
+
+        <div class="field full" style="margin-top:12px;">
+          <label><span lang-en>Specifications</span><span lang-bn>স্পেসিফিকেশন</span></label>
+          <div id="pSpecsList"></div>
+          <button type="button" class="btn btn-secondary btn-sm" style="margin-top:6px;" onclick="addSpecField()">+ <span lang-en>Add Spec</span><span lang-bn>স্পেক যুক্ত করুন</span></button>
+        </div>
+
+        <div class="field full" style="margin-top:12px;">
+          <label><span lang-en>Video Links (YouTube etc — add multiple)</span><span lang-bn>ভিডিও লিংক (YouTube ইত্যাদি — একাধিক)</span></label>
+          <div id="pVideosList"></div>
+          <button type="button" class="btn btn-secondary btn-sm" style="margin-top:6px;" onclick="addVideoField()">+ <span lang-en>Add Video</span><span lang-bn>ভিডিও যুক্ত করুন</span></button>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:16px;">
+          <button class="btn" style="width:auto;" onclick="saveProduct()"><span lang-en>Save</span><span lang-bn>সেভ করুন</span></button>
+          <button class="btn btn-secondary" style="width:auto; display:none;" id="cancelEditBtn" onclick="resetProductForm()"><span lang-en>Cancel</span><span lang-bn>বাতিল</span></button>
+        </div>
+        <div id="productMsg"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th><span lang-en>Name</span><span lang-bn>নাম</span></th><th><span lang-en>Brand</span><span lang-bn>ব্র্যান্ড</span></th><th><span lang-en>Category</span><span lang-bn>ক্যাটাগরি</span></th><th>Slug</th><th><span lang-en>Action</span><span lang-bn>একশন</span></th></tr></thead>
+          <tbody id="productsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PRICES TAB -->
+    <div class="admin-panel-body" id="tab-prices">
+      <div class="form-card">
+        <h3 id="priceFormTitle">➕ <span lang-en>Add New Price</span><span lang-bn>নতুন দাম যুক্ত করুন</span></h3>
+        <input type="hidden" id="priceEditId">
+        <div class="form-grid">
+          <div class="field"><label><span lang-en>Product</span><span lang-bn>প্রোডাক্ট</span></label><select id="prProduct"></select></div>
+          <div class="field"><label><span lang-en>Store</span><span lang-bn>শপ</span></label><select id="prStore"></select></div>
+          <div class="field"><label><span lang-en>Price (BDT)</span><span lang-bn>দাম (টাকা)</span></label><input type="number" id="prPrice" placeholder="21990"></div>
+          <div class="field"><label><span lang-en>In Stock?</span><span lang-bn>স্টক আছে?</span></label>
+            <select id="prStock"><option value="true">Yes / হ্যাঁ</option><option value="false">No / না</option></select>
+          </div>
+          <div class="field full"><label><span lang-en>Product URL (store link)</span><span lang-bn>প্রোডাক্ট URL</span></label><input id="prUrl" placeholder="https://daraz.com.bd/..."></div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:14px;">
+          <button class="btn" style="width:auto;" onclick="savePrice()"><span lang-en>Save</span><span lang-bn>সেভ করুন</span></button>
+          <button class="btn btn-secondary" style="width:auto; display:none;" id="cancelPriceEditBtn" onclick="resetPriceForm()"><span lang-en>Cancel</span><span lang-bn>বাতিল</span></button>
+        </div>
+        <div id="priceMsg"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th><span lang-en>Product</span><span lang-bn>প্রোডাক্ট</span></th><th><span lang-en>Store</span><span lang-bn>শপ</span></th><th><span lang-en>Price</span><span lang-bn>দাম</span></th><th><span lang-en>Stock</span><span lang-bn>স্টক</span></th><th><span lang-en>Updated</span><span lang-bn>আপডেট</span></th><th><span lang-en>Action</span><span lang-bn>একশন</span></th></tr></thead>
+          <tbody id="pricesTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STORES TAB -->
+    <div class="admin-panel-body" id="tab-stores">
+      <div class="form-card">
+        <h3 id="storeFormTitle">➕ <span lang-en>Add New Store</span><span lang-bn>নতুন শপ যুক্ত করুন</span></h3>
+        <input type="hidden" id="storeEditId">
+        <div class="form-grid">
+          <div class="field"><label><span lang-en>Store Name</span><span lang-bn>শপের নাম</span></label><input id="sName" placeholder="Daraz"></div>
+          <div class="field"><label>Base URL</label><input id="sUrl" placeholder="https://daraz.com.bd"></div>
+          <div class="field"><label><span lang-en>Logo URL</span><span lang-bn>লোগো URL</span></label><input id="sLogo" placeholder="https://..."></div>
+          <div class="field"><label>Affiliate?</label>
+            <select id="sAffiliate"><option value="false">No / না</option><option value="true">Yes / হ্যাঁ</option></select>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:14px;">
+          <button class="btn" style="width:auto;" onclick="saveStore()"><span lang-en>Save</span><span lang-bn>সেভ করুন</span></button>
+          <button class="btn btn-secondary" style="width:auto; display:none;" id="cancelStoreEditBtn" onclick="resetStoreForm()"><span lang-en>Cancel</span><span lang-bn>বাতিল</span></button>
+        </div>
+        <div id="storeMsg"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th><span lang-en>Name</span><span lang-bn>নাম</span></th><th>URL</th><th>Affiliate</th><th><span lang-en>Action</span><span lang-bn>একশন</span></th></tr></thead>
+          <tbody id="storesTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- USERS / STAFF TAB -->
+    <div class="admin-panel-body" id="tab-users">
+      <div class="form-card">
+        <h3>➕ <span lang-en>Add New Staff/Admin</span><span lang-bn>নতুন স্টাফ/অ্যাডমিন যুক্ত করুন</span></h3>
+        <p style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">
+          <span lang-en>Staff accounts have the same access as admin (manage products, prices, and stores).</span>
+          <span lang-bn>স্টাফ অ্যাকাউন্টের অ্যাডমিনের মতোই সব ক্ষমতা থাকবে (প্রোডাক্ট, দাম, শপ ম্যানেজ করা)।</span>
+        </p>
+        <div class="form-grid">
+          <div class="field"><label><span lang-en>Name</span><span lang-bn>নাম</span></label><input id="uName" placeholder="John Doe"></div>
+          <div class="field"><label><span lang-en>Email</span><span lang-bn>ইমেইল</span></label><input id="uEmail" type="email" placeholder="staff@checkpricebd.com"></div>
+          <div class="field"><label><span lang-en>Password</span><span lang-bn>পাসওয়ার্ড</span></label><input id="uPassword" type="password" placeholder="At least 6 characters"></div>
+          <div class="field"><label><span lang-en>Role</span><span lang-bn>রোল</span></label>
+            <select id="uRole">
+              <option value="staff">Staff</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:14px;">
+          <button class="btn" style="width:auto;" onclick="addStaffUser()"><span lang-en>Create User</span><span lang-bn>ইউজার তৈরি করুন</span></button>
+        </div>
+        <div id="userMsg"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th><span lang-en>Name</span><span lang-bn>নাম</span></th><th><span lang-en>Email</span><span lang-bn>ইমেইল</span></th><th><span lang-en>Role</span><span lang-bn>রোল</span></th><th><span lang-en>Action</span><span lang-bn>একশন</span></th></tr></thead>
+          <tbody id="usersTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= MOBILE BOTTOM NAV ========================= -->
+<nav class="bottom-nav">
+  <button id="navUser" class="active" onclick="switchView('user')">
+    <span class="icon">🏠</span>
+    <span lang-en>Home</span><span lang-bn>হোম</span>
+  </button>
+  <button id="navAccount" onclick="switchView('account')">
+    <span class="icon">👤</span>
+    <span lang-en>Account</span><span lang-bn>অ্যাকাউন্ট</span>
+  </button>
+  <button id="navAdmin" onclick="switchView('admin')">
+    <span class="icon">🔐</span>
+    <span lang-en>Admin</span><span lang-bn>অ্যাডমিন</span>
+  </button>
+</nav>
+
+<script>
+// ============================================
+// SUPABASE CONFIG
+// ============================================
+const SUPABASE_URL = 'https://kkngaalkvillmgvhakld.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrbmdhYWxrdmlsbG1ndmhha2xkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NTgyMDUsImV4cCI6MjA5NzUzNDIwNX0.Xucfdn3NKCcoj46JtyAzzMuISL5BW8LoWBq6blBPCHI';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let allProducts = [];
+let allStores = [];
+let activeCategory = 'all';
+let activeBrand = null;
+let currentLang = 'en';
+
+// ============================================
+// LANGUAGE TOGGLE
+// ============================================
+function setLang(lang){
+  currentLang = lang;
+  document.body.classList.toggle('bn', lang === 'bn');
+  document.documentElement.lang = lang;
+  document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
+  document.getElementById('langBnBtn').classList.toggle('active', lang === 'bn');
+  document.getElementById('searchInput').placeholder = lang === 'bn'
+    ? 'ফোনের নাম লিখুন... যেমন: Realme Narzo 60'
+    : 'Search a phone... e.g. Realme Narzo 60';
+  renderCategoryChips();
+  // re-render whatever grid is currently visible to refresh dynamic text (price labels etc.)
+  if(document.getElementById('userSection').style.display !== 'none'){
+    searchProducts();
+  }
+}
+
+// ============================================
+// VIEW SWITCHING (User <-> Admin)
+// ============================================
+function switchView(view){
+  document.getElementById('userSection').style.display = view === 'user' ? 'block' : 'none';
+  document.getElementById('accountSection').classList.toggle('show', view === 'account');
+  document.getElementById('adminSection').classList.toggle('show', view === 'admin');
+  document.getElementById('navUser').classList.toggle('active', view === 'user');
+  document.getElementById('navAccount').classList.toggle('active', view === 'account');
+  document.getElementById('navAdmin').classList.toggle('active', view === 'admin');
+  if(view === 'admin') checkAdminSession();
+  if(view === 'account') checkCustomerSession();
+}
+
+// ============================================
+// USER PANEL: LOAD & SEARCH PRODUCTS
+// ============================================
+async function loadUserData(){
+  document.getElementById('userLoader').style.display = 'block';
+  const { data: products, error: pErr } = await sb.from('products').select('*').order('created_at', {ascending:false});
+  const { data: prices, error: prErr } = await sb.from('prices').select('*, stores(name, logo_url, is_affiliate)');
+
+  document.getElementById('userLoader').style.display = 'none';
+
+  if(pErr || prErr){
+    console.error(pErr || prErr);
+    document.getElementById('productGrid').innerHTML = '<p style="color:var(--price-up); grid-column:1/-1;">Could not load data. Check console.</p>';
+    return;
+  }
+
+  allProducts = products.map(p => ({
+    ...p,
+    prices: prices.filter(pr => pr.product_id === p.id)
+  }));
+
+  renderCategoryChips();
+  renderProductGrid(allProducts);
+}
+
+const CAT_LABELS = {
+  all: {en:'All', bn:'সব'},
+  smartphone: {en:'Smartphone', bn:'স্মার্টফোন'},
+  laptop: {en:'Laptop', bn:'ল্যাপটপ'},
+  tablet: {en:'Tablet', bn:'ট্যাবলেট'},
+  accessories: {en:'Accessories', bn:'এক্সেসরিজ'}
+};
+
+function renderCategoryChips(){
+  const cats = ['all', ...new Set(allProducts.map(p => p.category))];
+  document.getElementById('categoryChips').innerHTML = cats.map(c => {
+    const label = CAT_LABELS[c] ? CAT_LABELS[c][currentLang] : c;
+    return `<button class="chip ${c===activeCategory?'active':''}" onclick="filterCategory('${c}')">${label}</button>`;
+  }).join('');
+  renderBrandChips();
+}
+
+function renderBrandChips(){
+  const brandBox = document.getElementById('brandChips');
+  const scoped = activeCategory === 'all' ? allProducts : allProducts.filter(p => p.category === activeCategory);
+  const brands = [...new Set(scoped.map(p => p.brand).filter(Boolean))].sort();
+  if(brands.length === 0){
+    brandBox.innerHTML = '';
+    brandBox.style.display = 'none';
+    return;
+  }
+  brandBox.style.display = 'flex';
+  const allLabel = currentLang === 'bn' ? 'সব ব্র্যান্ড' : 'All Brands';
+  brandBox.innerHTML = `<button class="chip brand-chip ${!activeBrand?'active':''}" onclick="filterBrand(null)">${allLabel}</button>` +
+    brands.map(b => `<button class="chip brand-chip ${b===activeBrand?'active':''}" onclick="filterBrand('${b}')">${b}</button>`).join('');
+}
+
+function filterBrand(brand){
+  activeBrand = brand;
+  renderBrandChips();
+  searchProducts();
+}
+
+function filterCategory(cat){
+  activeCategory = cat;
+  activeBrand = null;
+  renderCategoryChips();
+  searchProducts();
+}
+
+function searchProducts(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  let filtered = allProducts;
+  if(activeCategory !== 'all') filtered = filtered.filter(p => p.category === activeCategory);
+  if(activeBrand) filtered = filtered.filter(p => p.brand === activeBrand);
+  if(q) filtered = filtered.filter(p =>
+    p.name.toLowerCase().includes(q) || (p.brand && p.brand.toLowerCase().includes(q))
+  );
+  renderProductGrid(filtered);
+  renderSearchSuggestions(q);
+}
+document.getElementById('searchInput').addEventListener('input', searchProducts);
+document.getElementById('searchInput').addEventListener('focus', () => {
+  renderSearchSuggestions(document.getElementById('searchInput').value.trim().toLowerCase());
+});
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.search-wrapper')){
+    document.getElementById('searchSuggestions').classList.remove('show');
+  }
+});
+
+function renderSearchSuggestions(q){
+  const box = document.getElementById('searchSuggestions');
+  if(!q){ box.classList.remove('show'); box.innerHTML = ''; return; }
+  const matches = allProducts.filter(p =>
+    p.name.toLowerCase().includes(q) || (p.brand && p.brand.toLowerCase().includes(q))
+  ).slice(0, 8);
+  if(matches.length === 0){
+    box.innerHTML = `<div class="suggestion-empty">${currentLang === 'bn' ? 'কোনো মিল পাওয়া যায়নি' : 'No matches found'}</div>`;
+    box.classList.add('show');
+    return;
+  }
+  box.innerHTML = matches.map(p => `
+    <div class="suggestion-item" onclick="selectSuggestion('${p.id}')">
+      <img src="${p.image_url || 'https://via.placeholder.com/60'}" alt="">
+      <div>
+        <div class="s-name">${p.name}</div>
+        <div class="s-brand">${p.brand || ''}</div>
+      </div>
+    </div>`).join('');
+  box.classList.add('show');
+}
+
+function selectSuggestion(id){
+  document.getElementById('searchSuggestions').classList.remove('show');
+  openProduct(id);
+}
+
+function renderProductGrid(list){
+  const grid = document.getElementById('productGrid');
+  const empty = document.getElementById('userEmptyState');
+  if(list.length === 0){
+    grid.innerHTML = ''; empty.style.display = 'block'; return;
+  }
+  empty.style.display = 'none';
+  const storesLabel = currentLang === 'bn' ? 'টি শপে পাওয়া যাচ্ছে' : 'stores available';
+  const noPriceLabel = currentLang === 'bn' ? 'দাম পাওয়া যায়নি' : 'Price unavailable';
+  grid.innerHTML = list.map(p => {
+    const validPrices = p.prices.filter(pr => pr.price).map(pr => pr.price);
+    const min = validPrices.length ? Math.min(...validPrices) : null;
+    const max = validPrices.length ? Math.max(...validPrices) : null;
+    const priceText = min === null ? noPriceLabel :
+      min === max ? `৳${min.toLocaleString('en-BD')}` : `৳${min.toLocaleString('en-BD')} - ৳${max.toLocaleString('en-BD')}`;
+    return `
+      <div class="product-card" onclick="openProduct('${p.id}')">
+        <img src="${p.image_url || 'https://via.placeholder.com/300x200?text=No+Image'}" alt="${p.name}" loading="lazy">
+        <div class="brand">${p.brand || ''}</div>
+        <h3>${p.name}</h3>
+        <div class="price-range"><b>${priceText}</b></div>
+        <div class="store-count">${p.prices.length} ${storesLabel}</div>
+      </div>`;
+  }).join('');
+}
+
+function openProduct(id){
+  window.open(`product.html?id=${id}`, '_blank');
+}
+
+// ============================================
+// ADMIN: AUTH (কাস্টম users টেবিল দিয়ে, Supabase Auth নয়)
+// ============================================
+function getSession(){
+  try{ return JSON.parse(localStorage.getItem('cpbd_session') || 'null'); }
+  catch(e){ return null; }
+}
+
+function checkAdminSession(){
+  const session = getSession();
+  if(session && (session.role === 'admin' || session.role === 'staff')){
+    document.getElementById('loginBox').style.display = 'none';
+    document.getElementById('adminDashboard').style.display = 'block';
+    document.getElementById('adminWelcome').textContent =
+      (currentLang === 'bn' ? 'স্বাগতম, ' : 'Welcome, ') + (session.name || session.email) + ` (${session.role})`;
+    if(document.getElementById('pImagesList').children.length === 0){
+      addImageField(); addSpecField(); addVideoField();
+    }
+    loadAdminData();
+  } else {
+    document.getElementById('loginBox').style.display = 'block';
+    document.getElementById('adminDashboard').style.display = 'none';
+  }
+}
+
+async function adminLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const msgEl = document.getElementById('loginMsg');
+  msgEl.innerHTML = '';
+  if(!email || !password){
+    msgEl.innerHTML = '<div class="error-msg">Email and password required</div>'; return;
+  }
+  const { data, error } = await sb.rpc('verify_login', { p_email: email, p_password: password });
+  if(error){
+    msgEl.innerHTML = `<div class="error-msg">Login failed: ${error.message}</div>`;
+    return;
+  }
+  if(!data || data.length === 0){
+    msgEl.innerHTML = '<div class="error-msg">Invalid email or password</div>';
+    return;
+  }
+  const user = data[0];
+  if(user.role !== 'admin' && user.role !== 'staff'){
+    msgEl.innerHTML = '<div class="error-msg">This account does not have admin access</div>';
+    return;
+  }
+  localStorage.setItem('cpbd_session', JSON.stringify(user));
+  checkAdminSession();
+}
+
+function adminLogout(){
+  localStorage.removeItem('cpbd_session');
+  checkAdminSession();
+}
+
+// ============================================
+// ADMIN: EXCEL এক্সপোর্ট (সব প্রোডাক্ট/প্রাইস/শপ লিংক সহ)
+// ============================================
+async function exportToExcel(){
+  const { data, error } = await sb.rpc('export_all_prices');
+  if(error){
+    alert('Export failed: ' + error.message);
+    return;
+  }
+  if(!data || data.length === 0){
+    alert('No data to export yet.');
+    return;
+  }
+  const rows = data.map(r => ({
+    'Product Name': r.product_name,
+    'Brand': r.brand,
+    'Category': r.category,
+    'Store': r.store_name,
+    'Price (BDT)': r.price,
+    'In Stock': r.in_stock ? 'Yes' : 'No',
+    'Product Link': r.product_url,
+    'Last Updated': r.last_checked_at ? new Date(r.last_checked_at).toLocaleString() : ''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    {wch:28}, {wch:14}, {wch:14}, {wch:16}, {wch:12}, {wch:10}, {wch:50}, {wch:20}
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Prices');
+  const filename = `checkpricebd-export-${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+
+// ============================================
+// CUSTOMER: AUTH (signup_customer / verify_login RPC)
+// ============================================
+function getCustomerSession(){
+  try{ return JSON.parse(localStorage.getItem('cpbd_customer_session') || 'null'); }
+  catch(e){ return null; }
+}
+
+function switchAuthTab(tab){
+  document.getElementById('authTabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('authTabSignup').classList.toggle('active', tab === 'signup');
+  document.getElementById('customerLoginBox').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('customerSignupBox').style.display = tab === 'signup' ? 'block' : 'none';
+}
+
+function checkCustomerSession(){
+  const session = getCustomerSession();
+  if(session){
+    document.getElementById('accountAuthBox').style.display = 'none';
+    document.getElementById('accountLoggedInBox').style.display = 'block';
+    loadWishlist();
+  } else {
+    document.getElementById('accountAuthBox').style.display = 'block';
+    document.getElementById('accountLoggedInBox').style.display = 'none';
+  }
+}
+
+async function customerSignup(){
+  const name = document.getElementById('custSignupName').value.trim();
+  const email = document.getElementById('custSignupEmail').value.trim();
+  const password = document.getElementById('custSignupPassword').value;
+  const msgEl = document.getElementById('custSignupMsg');
+  msgEl.innerHTML = '';
+
+  if(!name || !email || !password){
+    msgEl.innerHTML = '<div class="error-msg">Please fill in all fields</div>'; return;
+  }
+  if(password.length < 6){
+    msgEl.innerHTML = '<div class="error-msg">Password must be at least 6 characters</div>'; return;
+  }
+
+  const { data, error } = await sb.rpc('signup_customer', { p_name: name, p_email: email, p_password: password });
+  if(error){
+    msgEl.innerHTML = `<div class="error-msg">${error.message.includes('duplicate') ? 'This email is already registered' : error.message}</div>`;
+    return;
+  }
+  const user = data[0];
+  localStorage.setItem('cpbd_customer_session', JSON.stringify(user));
+  checkCustomerSession();
+}
+
+async function customerLogin(){
+  const email = document.getElementById('custLoginEmail').value.trim();
+  const password = document.getElementById('custLoginPassword').value;
+  const msgEl = document.getElementById('custLoginMsg');
+  msgEl.innerHTML = '';
+
+  if(!email || !password){
+    msgEl.innerHTML = '<div class="error-msg">Email and password required</div>'; return;
+  }
+  const { data, error } = await sb.rpc('verify_login', { p_email: email, p_password: password });
+  if(error){
+    msgEl.innerHTML = `<div class="error-msg">${error.message}</div>`; return;
+  }
+  if(!data || data.length === 0){
+    msgEl.innerHTML = '<div class="error-msg">Invalid email or password</div>'; return;
+  }
+  localStorage.setItem('cpbd_customer_session', JSON.stringify(data[0]));
+  checkCustomerSession();
+}
+
+function customerLogout(){
+  localStorage.removeItem('cpbd_customer_session');
+  checkCustomerSession();
+}
+
+// ============================================
+// CUSTOMER: WISHLIST
+// ============================================
+async function loadWishlist(){
+  const session = getCustomerSession();
+  if(!session) return;
+  const { data, error } = await sb.from('wishlist').select('*, products(*)').eq('user_id', session.id);
+  const grid = document.getElementById('wishlistGrid');
+  const empty = document.getElementById('wishlistEmpty');
+  if(error || !data || data.length === 0){
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.innerHTML = data.map(w => {
+    const p = w.products;
+    if(!p) return '';
+    return `
+      <div class="product-card" style="position:relative;">
+        <button class="remove-wish-btn" style="position:absolute; top:10px; right:10px; z-index:2;" onclick="event.stopPropagation(); removeFromWishlist('${p.id}')">✕</button>
+        <div onclick="openProduct('${p.id}')">
+          <img src="${p.image_url || 'https://via.placeholder.com/300x200?text=No+Image'}" alt="${p.name}" loading="lazy">
+          <div class="brand">${p.brand || ''}</div>
+          <h3>${p.name}</h3>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function toggleWishlist(productId){
+  const session = getCustomerSession();
+  if(!session){
+    switchView('account');
+    return;
+  }
+  const { data: existing } = await sb.from('wishlist').select('id').eq('user_id', session.id).eq('product_id', productId).maybeSingle();
+  if(existing){
+    await sb.from('wishlist').delete().eq('id', existing.id);
+  } else {
+    await sb.from('wishlist').insert({ user_id: session.id, product_id: productId });
+  }
+  openProduct(productId); // refresh modal heart state
+}
+
+async function removeFromWishlist(productId){
+  const session = getCustomerSession();
+  if(!session) return;
+  await sb.from('wishlist').delete().eq('user_id', session.id).eq('product_id', productId);
+  loadWishlist();
+}
+
+async function isInWishlist(productId){
+  const session = getCustomerSession();
+  if(!session) return false;
+  const { data } = await sb.from('wishlist').select('id').eq('user_id', session.id).eq('product_id', productId).maybeSingle();
+  return !!data;
+}
+
+// ============================================
+// ADMIN: TAB SWITCHING
+// ============================================
+function switchAdminTab(tab){
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.admin-panel-body').forEach(t => t.classList.remove('show'));
+  event.target.closest('.admin-tab').classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('show');
+}
+
+// ============================================
+// ADMIN: LOAD ALL DATA
+// ============================================
+async function loadAdminData(){
+  const { data: products } = await sb.from('products').select('*').order('created_at', {ascending:false});
+  const { data: stores } = await sb.from('stores').select('*').order('created_at', {ascending:false});
+  const { data: prices } = await sb.from('prices').select('*, products(name), stores(name)').order('last_checked_at', {ascending:false});
+  const { data: users } = await sb.rpc('list_all_users');
+
+  allProducts = products || [];
+  allStores = stores || [];
+
+  renderProductsTable(allProducts);
+  renderStoresTable(allStores);
+  renderPricesTable(prices || []);
+  renderUsersTable(users || []);
+  populatePriceDropdowns();
+}
+
+// ---------- PRODUCTS CRUD ----------
+function renderProductsTable(list){
+  document.getElementById('productsTableBody').innerHTML = list.map(p => `
+    <tr>
+      <td>${p.name}</td><td>${p.brand||''}</td><td>${p.category}</td><td>${p.model_slug}</td>
+      <td class="actions-cell">
+        <button class="btn btn-sm btn-secondary" onclick="editProduct('${p.id}')">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">Delete</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--text-dim);">No products yet</td></tr>';
+}
+
+// ---------- DYNAMIC FIELD HELPERS (images / specs / videos) ----------
+function addImageField(value){
+  const row = document.createElement('div');
+  row.className = 'dyn-row';
+  row.innerHTML = `<input type="text" class="img-url-field" placeholder="https://..." value="${value ? value.replace(/"/g,'&quot;') : ''}">
+    <button type="button" class="dyn-remove" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('pImagesList').appendChild(row);
+}
+
+function addSpecField(key, value){
+  const row = document.createElement('div');
+  row.className = 'dyn-row';
+  row.innerHTML = `<input type="text" class="spec-key-field" placeholder="e.g. RAM" value="${key ? key.replace(/"/g,'&quot;') : ''}" style="flex:0 0 35%;">
+    <input type="text" class="spec-val-field" placeholder="e.g. 8GB" value="${value ? String(value).replace(/"/g,'&quot;') : ''}">
+    <button type="button" class="dyn-remove" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('pSpecsList').appendChild(row);
+}
+
+function addVideoField(title, url){
+  const row = document.createElement('div');
+  row.className = 'dyn-row';
+  row.innerHTML = `<input type="text" class="video-title-field" placeholder="Video title (optional)" value="${title ? title.replace(/"/g,'&quot;') : ''}" style="flex:0 0 35%;">
+    <input type="text" class="video-url-field" placeholder="https://youtube.com/watch?v=..." value="${url ? url.replace(/"/g,'&quot;') : ''}">
+    <button type="button" class="dyn-remove" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('pVideosList').appendChild(row);
+}
+
+function clearDynFields(){
+  document.getElementById('pImagesList').innerHTML = '';
+  document.getElementById('pSpecsList').innerHTML = '';
+  document.getElementById('pVideosList').innerHTML = '';
+}
+
+async function editProduct(id){
+  const p = allProducts.find(x => x.id === id);
+  if(!p) return;
+  document.getElementById('productEditId').value = p.id;
+  document.getElementById('pName').value = p.name;
+  document.getElementById('pBrand').value = p.brand || '';
+  document.getElementById('pCategory').value = p.category;
+  document.getElementById('pSlug').value = p.model_slug;
+  document.getElementById('pDescription').value = p.description || '';
+
+  clearDynFields();
+  const images = (p.images && p.images.length) ? p.images : (p.image_url ? [p.image_url] : []);
+  if(images.length) images.forEach(img => addImageField(img));
+  else addImageField();
+
+  const specs = p.specs || {};
+  if(Object.keys(specs).length) Object.entries(specs).forEach(([k,v]) => addSpecField(k, v));
+  else addSpecField();
+
+  const { data: vids } = await sb.from('product_videos').select('*').eq('product_id', id);
+  if(vids && vids.length) vids.forEach(v => addVideoField(v.title, v.video_url));
+  else addVideoField();
+
+  document.getElementById('productFormTitle').innerHTML = '✏️ <span lang-en>Edit Product</span><span lang-bn>প্রোডাক্ট এডিট করুন</span>';
+  document.getElementById('cancelEditBtn').style.display = 'inline-block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function resetProductForm(){
+  document.getElementById('productEditId').value = '';
+  ['pName','pBrand','pSlug','pDescription'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pCategory').value = 'smartphone';
+  clearDynFields();
+  addImageField();
+  addSpecField();
+  addVideoField();
+  document.getElementById('productFormTitle').innerHTML = '➕ <span lang-en>Add New Product</span><span lang-bn>নতুন প্রোডাক্ট যুক্ত করুন</span>';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+}
+
+async function saveProduct(){
+  const id = document.getElementById('productEditId').value;
+  const name = document.getElementById('pName').value.trim();
+  const brand = document.getElementById('pBrand').value.trim();
+  const category = document.getElementById('pCategory').value;
+  const model_slug = document.getElementById('pSlug').value.trim().toLowerCase();
+  const description = document.getElementById('pDescription').value.trim();
+  const msgEl = document.getElementById('productMsg');
+  msgEl.innerHTML = '';
+
+  if(!name || !model_slug){
+    msgEl.innerHTML = '<div class="error-msg">Name and Slug are required</div>'; return;
+  }
+
+  const images = [...document.querySelectorAll('.img-url-field')].map(el => el.value.trim()).filter(Boolean);
+  const image_url = images[0] || '';
+
+  const specs = {};
+  document.querySelectorAll('.spec-key-field').forEach((keyEl, i) => {
+    const valEl = document.querySelectorAll('.spec-val-field')[i];
+    const k = keyEl.value.trim();
+    const v = valEl ? valEl.value.trim() : '';
+    if(k) specs[k] = v;
+  });
+
+  const payload = { name, brand, category, model_slug, image_url, images, description, specs };
+  let res, productId = id;
+  if(id) res = await sb.from('products').update(payload).eq('id', id);
+  else {
+    res = await sb.from('products').insert(payload).select().single();
+    if(!res.error) productId = res.data.id;
+  }
+
+  if(res.error){
+    msgEl.innerHTML = `<div class="error-msg">Error: ${res.error.message}</div>`;
+    return;
+  }
+
+  // ভিডিও লিংক আপডেট: পুরনো সব ডিলিট করে নতুন করে ইনসার্ট (সহজ ও নিরাপদ অ্যাপ্রোচ)
+  await sb.from('product_videos').delete().eq('product_id', productId);
+  const videoRows = [];
+  document.querySelectorAll('.video-url-field').forEach((urlEl, i) => {
+    const titleEl = document.querySelectorAll('.video-title-field')[i];
+    const url = urlEl.value.trim();
+    if(url) videoRows.push({ product_id: productId, title: titleEl ? titleEl.value.trim() : '', video_url: url });
+  });
+  if(videoRows.length) await sb.from('product_videos').insert(videoRows);
+
+  msgEl.innerHTML = '<div class="success-msg">Saved successfully ✓</div>';
+  resetProductForm();
+  loadAdminData();
+}
+
+async function deleteProduct(id){
+  if(!confirm('This product and all its prices will be deleted. Continue?')) return;
+  const { error } = await sb.from('products').delete().eq('id', id);
+  if(error) alert('Error: ' + error.message);
+  else loadAdminData();
+}
+
+// ---------- STORES CRUD ----------
+function renderStoresTable(list){
+  document.getElementById('storesTableBody').innerHTML = list.map(s => `
+    <tr>
+      <td>${s.name}</td><td style="font-size:12px; color:var(--text-dim);">${s.base_url||''}</td>
+      <td>${s.is_affiliate ? '✓' : '—'}</td>
+      <td class="actions-cell">
+        <button class="btn btn-sm btn-secondary" onclick="editStore('${s.id}')">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteStore('${s.id}')">Delete</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">No stores yet</td></tr>';
+}
+
+function editStore(id){
+  const s = allStores.find(x => x.id === id);
+  if(!s) return;
+  document.getElementById('storeEditId').value = s.id;
+  document.getElementById('sName').value = s.name;
+  document.getElementById('sUrl').value = s.base_url || '';
+  document.getElementById('sLogo').value = s.logo_url || '';
+  document.getElementById('sAffiliate').value = String(s.is_affiliate);
+  document.getElementById('storeFormTitle').innerHTML = '✏️ <span lang-en>Edit Store</span><span lang-bn>শপ এডিট করুন</span>';
+  document.getElementById('cancelStoreEditBtn').style.display = 'inline-block';
+}
+
+function resetStoreForm(){
+  document.getElementById('storeEditId').value = '';
+  ['sName','sUrl','sLogo'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('sAffiliate').value = 'false';
+  document.getElementById('storeFormTitle').innerHTML = '➕ <span lang-en>Add New Store</span><span lang-bn>নতুন শপ যুক্ত করুন</span>';
+  document.getElementById('cancelStoreEditBtn').style.display = 'none';
+}
+
+async function saveStore(){
+  const id = document.getElementById('storeEditId').value;
+  const name = document.getElementById('sName').value.trim();
+  const base_url = document.getElementById('sUrl').value.trim();
+  const logo_url = document.getElementById('sLogo').value.trim();
+  const is_affiliate = document.getElementById('sAffiliate').value === 'true';
+  const msgEl = document.getElementById('storeMsg');
+  msgEl.innerHTML = '';
+
+  if(!name){ msgEl.innerHTML = '<div class="error-msg">Store name is required</div>'; return; }
+
+  const payload = { name, base_url, logo_url, is_affiliate };
+  let res;
+  if(id) res = await sb.from('stores').update(payload).eq('id', id);
+  else res = await sb.from('stores').insert(payload);
+
+  if(res.error){
+    msgEl.innerHTML = `<div class="error-msg">Error: ${res.error.message}</div>`;
+  } else {
+    msgEl.innerHTML = '<div class="success-msg">Saved successfully ✓</div>';
+    resetStoreForm();
+    loadAdminData();
+  }
+}
+
+async function deleteStore(id){
+  if(!confirm('This store and all its prices will be deleted. Continue?')) return;
+  const { error } = await sb.from('stores').delete().eq('id', id);
+  if(error) alert('Error: ' + error.message);
+  else loadAdminData();
+}
+
+// ---------- USERS / STAFF CRUD ----------
+function renderUsersTable(list){
+  document.getElementById('usersTableBody').innerHTML = list.map(u => `
+    <tr>
+      <td>${u.name || '—'}</td><td>${u.email}</td>
+      <td><span class="badge-stock ${u.role === 'customer' ? 'badge-out' : 'badge-in'}" style="text-transform:capitalize;">${u.role}</span></td>
+      <td class="actions-cell">
+        <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}', '${u.email}')">Delete</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">No users yet</td></tr>';
+}
+
+async function addStaffUser(){
+  const name = document.getElementById('uName').value.trim();
+  const email = document.getElementById('uEmail').value.trim();
+  const password = document.getElementById('uPassword').value;
+  const role = document.getElementById('uRole').value;
+  const msgEl = document.getElementById('userMsg');
+  msgEl.innerHTML = '';
+
+  if(!name || !email || !password){
+    msgEl.innerHTML = '<div class="error-msg">Please fill in all fields</div>'; return;
+  }
+  if(password.length < 6){
+    msgEl.innerHTML = '<div class="error-msg">Password must be at least 6 characters</div>'; return;
+  }
+
+  const { error } = await sb.rpc('create_staff_user', { p_name: name, p_email: email, p_password: password, p_role: role });
+  if(error){
+    msgEl.innerHTML = `<div class="error-msg">${error.message.includes('duplicate') ? 'This email is already registered' : error.message}</div>`;
+    return;
+  }
+  msgEl.innerHTML = '<div class="success-msg">User created successfully ✓</div>';
+  ['uName','uEmail','uPassword'].forEach(id => document.getElementById(id).value = '');
+  loadAdminData();
+}
+
+async function deleteUser(id, email){
+  if(!confirm(`Delete user ${email}? This cannot be undone.`)) return;
+  const { error } = await sb.rpc('delete_user_by_id', { p_user_id: id });
+  if(error) alert('Error: ' + error.message);
+  else loadAdminData();
+}
+
+// ---------- PRICES CRUD ----------
+function populatePriceDropdowns(){
+  document.getElementById('prProduct').innerHTML = allProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  document.getElementById('prStore').innerHTML = allStores.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+function renderPricesTable(list){
+  document.getElementById('pricesTableBody').innerHTML = list.map(pr => `
+    <tr>
+      <td>${pr.products?.name || '—'}</td>
+      <td>${pr.stores?.name || '—'}</td>
+      <td>৳${Number(pr.price).toLocaleString('en-BD')}</td>
+      <td><span class="badge-stock ${pr.in_stock ? 'badge-in':'badge-out'}">${pr.in_stock ? 'In stock':'Out of stock'}</span></td>
+      <td style="font-size:11px; color:var(--text-dim);">${new Date(pr.last_checked_at).toLocaleDateString()}</td>
+      <td class="actions-cell">
+        <button class="btn btn-sm btn-secondary" onclick='editPrice(${JSON.stringify(pr).replace(/'/g,"&#39;")})'>Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deletePrice('${pr.id}')">Delete</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center; color:var(--text-dim);">No price entries yet</td></tr>';
+}
+
+function editPrice(pr){
+  document.getElementById('priceEditId').value = pr.id;
+  document.getElementById('prProduct').value = pr.product_id;
+  document.getElementById('prStore').value = pr.store_id;
+  document.getElementById('prPrice').value = pr.price;
+  document.getElementById('prStock').value = String(pr.in_stock);
+  document.getElementById('prUrl').value = pr.product_url;
+  document.getElementById('priceFormTitle').innerHTML = '✏️ <span lang-en>Edit Price</span><span lang-bn>দাম এডিট করুন</span>';
+  document.getElementById('cancelPriceEditBtn').style.display = 'inline-block';
+}
+
+function resetPriceForm(){
+  document.getElementById('priceEditId').value = '';
+  document.getElementById('prPrice').value = '';
+  document.getElementById('prUrl').value = '';
+  document.getElementById('prStock').value = 'true';
+  document.getElementById('priceFormTitle').innerHTML = '➕ <span lang-en>Add New Price</span><span lang-bn>নতুন দাম যুক্ত করুন</span>';
+  document.getElementById('cancelPriceEditBtn').style.display = 'none';
+}
+
+async function savePrice(){
+  const id = document.getElementById('priceEditId').value;
+  const product_id = document.getElementById('prProduct').value;
+  const store_id = document.getElementById('prStore').value;
+  const price = parseFloat(document.getElementById('prPrice').value);
+  const in_stock = document.getElementById('prStock').value === 'true';
+  const product_url = document.getElementById('prUrl').value.trim();
+  const msgEl = document.getElementById('priceMsg');
+  msgEl.innerHTML = '';
+
+  if(!product_id || !store_id || !price || !product_url){
+    msgEl.innerHTML = '<div class="error-msg">Please fill in all fields</div>'; return;
+  }
+
+  const payload = { product_id, store_id, price, in_stock, product_url, last_checked_at: new Date().toISOString() };
+  let res;
+  if(id) res = await sb.from('prices').update(payload).eq('id', id);
+  else res = await sb.from('prices').insert(payload);
+
+  if(res.error){
+    msgEl.innerHTML = `<div class="error-msg">Error: ${res.error.message} (if this product+store combo already exists, edit that entry instead)</div>`;
+  } else {
+    msgEl.innerHTML = '<div class="success-msg">Saved successfully ✓</div>';
+    resetPriceForm();
+    loadAdminData();
+  }
+}
+
+async function deletePrice(id){
+  if(!confirm('Delete this price entry?')) return;
+  const { error } = await sb.from('prices').delete().eq('id', id);
+  if(error) alert('Error: ' + error.message);
+  else loadAdminData();
+}
+
+// ============================================
+// INIT
+// ============================================
+loadUserData();
+const initialView = new URLSearchParams(window.location.search).get('view');
+if(initialView === 'account' || initialView === 'admin'){
+  switchView(initialView);
+}
+</script>
+</body>
+</html>
