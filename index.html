@@ -470,7 +470,9 @@
     <div class="search-wrapper" style="position:relative;">
       <div class="search-box">
         <span class="icon">🔍</span>
-        <input id="searchInput" type="text" placeholder="Search a phone... e.g. Realme Narzo 60" autocomplete="off">
+        <input id="searchInput" name="cpbd-search-query" type="search" placeholder="Search a phone... e.g. Realme Narzo 60" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other">
+        <input type="text" name="email" style="position:absolute; opacity:0; height:0; width:0; pointer-events:none;" tabindex="-1" aria-hidden="true">
+        <input type="password" name="password" style="position:absolute; opacity:0; height:0; width:0; pointer-events:none;" tabindex="-1" aria-hidden="true">
         <button onclick="searchProducts()"><span lang-en>Search</span><span lang-bn>খুঁজুন</span></button>
       </div>
       <div id="searchSuggestions" class="search-suggestions"></div>
