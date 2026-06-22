@@ -456,6 +456,25 @@
   .badge-in{background:rgba(61,220,132,.15); color:var(--accent);}
   .badge-out{background:rgba(255,107,91,.15); color:var(--price-up);}
   .banner-thumb{width:80px; height:30px; object-fit:cover; border-radius:6px; background:#eef2f6;}
+  .size-hint{
+    font-size:11.5px; color:var(--text-dim); background:var(--bg); border:1px solid var(--border);
+    border-radius:8px; padding:8px 11px; margin-bottom:8px;
+  }
+  .size-hint b{color:var(--text);}
+  .upload-or-row{display:flex; align-items:center; gap:10px; margin-top:8px;}
+  .upload-or-line{font-size:12px; color:var(--text-dim); font-weight:600;}
+  .upload-btn{
+    display:inline-flex; align-items:center; gap:6px; background:var(--card); border:1.5px dashed var(--border);
+    padding:8px 14px; border-radius:9px; cursor:pointer; font-size:12.5px; font-weight:700; color:var(--text-dim);
+  }
+  .upload-btn:hover{border-color:var(--blue); color:var(--blue);}
+  .reorder-btns{display:flex; flex-direction:column; gap:2px;}
+  .reorder-btn{
+    background:var(--card); border:1px solid var(--border); color:var(--text-dim);
+    width:26px; height:22px; border-radius:5px; cursor:pointer; font-size:11px; line-height:1;
+  }
+  .reorder-btn:hover{border-color:var(--blue); color:var(--blue);}
+  .reorder-btn:disabled{opacity:.3; cursor:not-allowed;}
 
   .empty-state{text-align:center; padding:50px 20px; color:var(--text-dim); font-size:14px;}
   .loader{text-align:center; padding:40px; color:var(--text-dim); font-size:13px;}
@@ -802,7 +821,23 @@
         </p>
         <input type="hidden" id="bannerEditId">
         <div class="form-grid">
-          <div class="field full"><label><span lang-en>Banner Image URL</span><span lang-bn>ব্যানার ছবির URL</span></label><input id="bImage" placeholder="https://..."></div>
+          <div class="field full">
+            <label><span lang-en>Banner Image</span><span lang-bn>ব্যানার ছবি</span></label>
+            <div class="size-hint">
+              <span lang-en>📐 Recommended size: <b>1200 × 400px</b> (3:1 ratio) for desktop. On mobile it will show as 16:8. Max file size: 5MB.</span>
+              <span lang-bn>📐 প্রস্তাবিত সাইজ: <b>1200 × 400px</b> (3:1 অনুপাত) ডেস্কটপের জন্য। মোবাইলে 16:8 অনুপাতে দেখাবে। ফাইল সাইজ ৫MB-এর বেশি না হওয়া ভালো।</span>
+            </div>
+            <input id="bImage" placeholder="https://..." oninput="previewBannerImage()">
+            <div class="upload-or-row">
+              <span class="upload-or-line"><span lang-en>or</span><span lang-bn>অথবা</span></span>
+              <label class="upload-btn">
+                📤 <span lang-en>Upload JPG/PNG</span><span lang-bn>ছবি আপলোড করুন</span>
+                <input type="file" id="bImageFile" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;" onchange="uploadBannerImage(this)">
+              </label>
+              <span id="bUploadStatus" style="font-size:12px; color:var(--text-dim);"></span>
+            </div>
+            <img id="bImagePreview" style="display:none; max-width:100%; max-height:140px; border-radius:8px; margin-top:10px; border:1px solid var(--border);">
+          </div>
           <div class="field full"><label><span lang-en>Link URL (optional — opens when banner is clicked)</span><span lang-bn>লিংক URL (ঐচ্ছিক — ব্যানারে ক্লিক করলে খুলবে)</span></label><input id="bLink" placeholder="https://..."></div>
           <div class="field"><label><span lang-en>Status</span><span lang-bn>স্ট্যাটাস</span></label>
             <select id="bActive"><option value="true">Active</option><option value="false">Inactive</option></select>
@@ -818,7 +853,7 @@
 
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th><span lang-en>Preview</span><span lang-bn>প্রিভিউ</span></th><th><span lang-en>Link</span><span lang-bn>লিংক</span></th><th><span lang-en>Status</span><span lang-bn>স্ট্যাটাস</span></th><th><span lang-en>Order</span><span lang-bn>সিরিয়াল</span></th><th><span lang-en>Action</span><span lang-bn>একশন</span></th></tr></thead>
+          <thead><tr><th><span lang-en>Preview</span><span lang-bn>প্রিভিউ</span></th><th><span lang-en>Link</span><span lang-bn>লিংক</span></th><th><span lang-en>Status</span><span lang-bn>স্ট্যাটাস</span></th><th><span lang-en>Order</span><span lang-bn>সিরিয়াল</span></th><th><span lang-en>Action</span><span lang-bn>একশন</span></th><th><span lang-en>Reorder</span><span lang-bn>সাজান</span></th></tr></thead>
           <tbody id="bannersTableBody"></tbody>
         </table>
       </div>
@@ -1624,8 +1659,8 @@ async function deleteUser(id, email){
 let allBanners = [];
 
 function renderBannersTable(list){
-  allBanners = list;
-  document.getElementById('bannersTableBody').innerHTML = list.map(b => `
+  allBanners = [...list].sort((a,b) => a.sort_order - b.sort_order);
+  document.getElementById('bannersTableBody').innerHTML = allBanners.map((b, i) => `
     <tr>
       <td><img class="banner-thumb" src="${b.image_url}" alt=""></td>
       <td style="font-size:11px; color:var(--text-dim); max-width:160px; overflow:hidden; text-overflow:ellipsis;">${b.link_url || '—'}</td>
@@ -1635,7 +1670,52 @@ function renderBannersTable(list){
         <button class="btn btn-sm btn-secondary" onclick="editBanner('${b.id}')">Edit</button>
         <button class="btn btn-sm btn-danger" onclick="deleteBanner('${b.id}')">Delete</button>
       </td>
-    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--text-dim);">No banners yet</td></tr>';
+      <td>
+        <div class="reorder-btns">
+          <button class="reorder-btn" onclick="moveBanner('${b.id}', 'up')" ${i===0?'disabled':''}>▲</button>
+          <button class="reorder-btn" onclick="moveBanner('${b.id}', 'down')" ${i===allBanners.length-1?'disabled':''}>▼</button>
+        </div>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center; color:var(--text-dim);">No banners yet</td></tr>';
+}
+
+// ছবি প্রিভিউ (URL টাইপ করলে বা পেস্ট করলে নিচে দেখাবে)
+function previewBannerImage(){
+  const url = document.getElementById('bImage').value.trim();
+  const img = document.getElementById('bImagePreview');
+  if(url){ img.src = url; img.style.display = 'block'; }
+  else { img.style.display = 'none'; }
+}
+
+// সরাসরি ফাইল আপলোড (Supabase Storage bucket: banner-images)
+async function uploadBannerImage(input){
+  const session = getSession();
+  if(session && session.role === 'staff') return;
+  const file = input.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('bUploadStatus');
+
+  if(file.size > 5 * 1024 * 1024){
+    statusEl.innerHTML = '<span style="color:var(--price-up);">File too large (max 5MB)</span>';
+    input.value = '';
+    return;
+  }
+
+  statusEl.textContent = currentLang === 'bn' ? 'আপলোড হচ্ছে...' : 'Uploading...';
+  const ext = file.name.split('.').pop();
+  const fileName = `banner-${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await sb.storage.from('banner-images').upload(fileName, file);
+  if(uploadError){
+    statusEl.innerHTML = `<span style="color:var(--price-up);">Upload failed: ${uploadError.message}</span>`;
+    return;
+  }
+
+  const { data: urlData } = sb.storage.from('banner-images').getPublicUrl(fileName);
+  document.getElementById('bImage').value = urlData.publicUrl;
+  previewBannerImage();
+  statusEl.innerHTML = '<span style="color:var(--accent);">✓ Uploaded</span>';
+  input.value = '';
 }
 
 function editBanner(id){
@@ -1648,6 +1728,7 @@ function editBanner(id){
   document.getElementById('bLink').value = b.link_url || '';
   document.getElementById('bActive').value = String(b.is_active);
   document.getElementById('bOrder').value = b.sort_order || 0;
+  previewBannerImage();
   document.getElementById('bannerFormTitle').innerHTML = '✏️ <span lang-en>Edit Banner Slide</span><span lang-bn>ব্যানার স্লাইড এডিট করুন</span>';
   document.getElementById('cancelBannerEditBtn').style.display = 'inline-block';
   window.scrollTo({top:0, behavior:'smooth'});
@@ -1659,6 +1740,8 @@ function resetBannerForm(){
   document.getElementById('bLink').value = '';
   document.getElementById('bActive').value = 'true';
   document.getElementById('bOrder').value = '0';
+  document.getElementById('bImagePreview').style.display = 'none';
+  document.getElementById('bUploadStatus').innerHTML = '';
   document.getElementById('bannerFormTitle').innerHTML = '➕ <span lang-en>Add New Banner Slide</span><span lang-bn>নতুন ব্যানার স্লাইড যুক্ত করুন</span>';
   document.getElementById('cancelBannerEditBtn').style.display = 'none';
 }
@@ -1675,7 +1758,7 @@ async function saveBanner(){
   msgEl.innerHTML = '';
 
   if(!image_url){
-    msgEl.innerHTML = '<div class="error-msg">Image URL is required</div>'; return;
+    msgEl.innerHTML = '<div class="error-msg">Image URL is required (paste a link or upload a file above)</div>'; return;
   }
 
   const payload = { image_url, link_url, is_active, sort_order };
@@ -1700,6 +1783,26 @@ async function deleteBanner(id){
   const { error } = await sb.from('banners').delete().eq('id', id);
   if(error) alert('Error: ' + error.message);
   else { loadAdminData(); loadBanners(); }
+}
+
+// উপর/নিচ বাটনে ক্লিক করলে sort_order swap করে reorder করা হয়
+async function moveBanner(id, direction){
+  const session = getSession();
+  if(session && session.role === 'staff') return;
+  const idx = allBanners.findIndex(b => b.id === id);
+  if(idx === -1) return;
+  const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if(targetIdx < 0 || targetIdx >= allBanners.length) return;
+
+  const current = allBanners[idx];
+  const target = allBanners[targetIdx];
+
+  // দুটো ব্যানারের sort_order একে অপরের সাথে অদলবদল
+  await sb.from('banners').update({ sort_order: target.sort_order }).eq('id', current.id);
+  await sb.from('banners').update({ sort_order: current.sort_order }).eq('id', target.id);
+
+  loadAdminData();
+  loadBanners();
 }
 
 // ---------- PRICES CRUD ----------
