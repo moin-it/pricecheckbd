@@ -235,6 +235,52 @@
 
   .container{max-width:1100px; margin:0 auto; padding:0 16px 40px;}
 
+  /* ---------- BANNER SLIDER ---------- */
+  .banner-slider{
+    position:relative;
+    width:100%;
+    border-radius:var(--radius);
+    overflow:hidden;
+    margin-bottom:18px;
+    box-shadow:var(--shadow-sm);
+    background:#eef2f6;
+  }
+  .banner-track{
+    display:flex;
+    transition:transform .5s ease;
+  }
+  .banner-track a, .banner-track .banner-slide{
+    flex:0 0 100%;
+    display:block;
+    width:100%;
+  }
+  .banner-track img{
+    width:100%;
+    height:auto;
+    aspect-ratio:16/5;
+    object-fit:cover;
+    display:block;
+  }
+  @media (max-width:640px){
+    .banner-track img{aspect-ratio:16/8;}
+  }
+  .banner-dots{
+    position:absolute;
+    bottom:10px; left:0; right:0;
+    display:flex;
+    justify-content:center;
+    gap:6px;
+  }
+  .banner-dot{
+    width:7px; height:7px;
+    border-radius:50%;
+    background:rgba(255,255,255,.6);
+    border:1px solid rgba(0,0,0,.15);
+    cursor:pointer;
+    transition:.2s;
+  }
+  .banner-dot.active{background:#fff; width:18px; border-radius:4px;}
+
   /* ---------- CATEGORY CHIPS ---------- */
   .chips{
     display:flex; gap:8px; overflow-x:auto; margin:16px 0 18px;
@@ -282,8 +328,9 @@
   .product-card:hover{box-shadow:var(--shadow-md);}
   .product-card img{
     width:100%;
-    height:108px;
-    object-fit:cover;
+    aspect-ratio:1/1;
+    height:auto;
+    object-fit:contain;
     border-radius:10px;
     margin-bottom:10px;
     background:#eef2f6;
@@ -408,6 +455,7 @@
   .badge-stock{font-size:11px; padding:3px 9px; border-radius:999px; font-weight:700;}
   .badge-in{background:rgba(61,220,132,.15); color:var(--accent);}
   .badge-out{background:rgba(255,107,91,.15); color:var(--price-up);}
+  .banner-thumb{width:80px; height:30px; object-fit:cover; border-radius:6px; background:#eef2f6;}
 
   .empty-state{text-align:center; padding:50px 20px; color:var(--text-dim); font-size:14px;}
   .loader{text-align:center; padding:40px; color:var(--text-dim); font-size:13px;}
@@ -476,6 +524,13 @@
         <button onclick="searchProducts()"><span lang-en>Search</span><span lang-bn>খুঁজুন</span></button>
       </div>
       <div id="searchSuggestions" class="search-suggestions"></div>
+    </div>
+  </div>
+
+  <div class="container" id="bannerContainer" style="display:none;">
+    <div class="banner-slider" id="bannerSlider">
+      <div class="banner-track" id="bannerTrack"></div>
+      <div class="banner-dots" id="bannerDots"></div>
     </div>
   </div>
 
@@ -584,6 +639,7 @@
       <button class="admin-tab" onclick="switchAdminTab('prices')"><span lang-en>Prices</span><span lang-bn>দাম</span></button>
       <button class="admin-tab" id="tabBtnStores" onclick="switchAdminTab('stores')"><span lang-en>Stores</span><span lang-bn>শপ/স্টোর</span></button>
       <button class="admin-tab" id="tabBtnUsers" onclick="switchAdminTab('users')"><span lang-en>Staff/Users</span><span lang-bn>স্টাফ/ইউজার</span></button>
+      <button class="admin-tab" id="tabBtnBanner" onclick="switchAdminTab('banner')"><span lang-en>Banner</span><span lang-bn>ব্যানার</span></button>
     </div>
 
     <!-- PRODUCTS TAB -->
@@ -735,6 +791,38 @@
         </table>
       </div>
     </div>
+
+    <!-- BANNER TAB -->
+    <div class="admin-panel-body" id="tab-banner">
+      <div class="form-card">
+        <h3 id="bannerFormTitle">➕ <span lang-en>Add New Banner Slide</span><span lang-bn>নতুন ব্যানার স্লাইড যুক্ত করুন</span></h3>
+        <p style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">
+          <span lang-en>Add multiple slides to auto-rotate every 3 seconds on the homepage. Each slide can link to a URL — tapping the banner image opens that link.</span>
+          <span lang-bn>হোমপেজে একাধিক স্লাইড যুক্ত করতে পারেন, প্রতি ৩ সেকেন্ডে অটো-পরিবর্তন হবে। প্রতিটা স্লাইডে একটা লিংক দেওয়া যাবে — ছবিতে ক্লিক করলে সেই লিংক খুলবে।</span>
+        </p>
+        <input type="hidden" id="bannerEditId">
+        <div class="form-grid">
+          <div class="field full"><label><span lang-en>Banner Image URL</span><span lang-bn>ব্যানার ছবির URL</span></label><input id="bImage" placeholder="https://..."></div>
+          <div class="field full"><label><span lang-en>Link URL (optional — opens when banner is clicked)</span><span lang-bn>লিংক URL (ঐচ্ছিক — ব্যানারে ক্লিক করলে খুলবে)</span></label><input id="bLink" placeholder="https://..."></div>
+          <div class="field"><label><span lang-en>Status</span><span lang-bn>স্ট্যাটাস</span></label>
+            <select id="bActive"><option value="true">Active</option><option value="false">Inactive</option></select>
+          </div>
+          <div class="field"><label><span lang-en>Sort Order (lower shows first)</span><span lang-bn>সিরিয়াল নম্বর (ছোট সংখ্যা আগে দেখাবে)</span></label><input id="bOrder" type="number" value="0"></div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:14px;">
+          <button class="btn" style="width:auto;" onclick="saveBanner()"><span lang-en>Save</span><span lang-bn>সেভ করুন</span></button>
+          <button class="btn btn-secondary" style="width:auto; display:none;" id="cancelBannerEditBtn" onclick="resetBannerForm()"><span lang-en>Cancel</span><span lang-bn>বাতিল</span></button>
+        </div>
+        <div id="bannerMsg"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th><span lang-en>Preview</span><span lang-bn>প্রিভিউ</span></th><th><span lang-en>Link</span><span lang-bn>লিংক</span></th><th><span lang-en>Status</span><span lang-bn>স্ট্যাটাস</span></th><th><span lang-en>Order</span><span lang-bn>সিরিয়াল</span></th><th><span lang-en>Action</span><span lang-bn>একশন</span></th></tr></thead>
+          <tbody id="bannersTableBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -782,6 +870,61 @@ function switchView(view){
   document.getElementById('navAccount').classList.toggle('active', view === 'account' || view === 'admin');
   if(view === 'admin') checkAdminSession();
   if(view === 'account') checkCustomerSession();
+}
+
+// ============================================
+// HOMEPAGE BANNER SLIDER
+// ============================================
+let bannerList = [];
+let bannerIndex = 0;
+let bannerTimer = null;
+
+async function loadBanners(){
+  const { data, error } = await sb.from('banners').select('*').eq('is_active', true).order('sort_order', {ascending:true});
+  if(error || !data || data.length === 0){
+    document.getElementById('bannerContainer').style.display = 'none';
+    return;
+  }
+  bannerList = data;
+  renderBannerSlider();
+  document.getElementById('bannerContainer').style.display = 'block';
+  if(bannerList.length > 1) startBannerAutoSlide();
+}
+
+function renderBannerSlider(){
+  const track = document.getElementById('bannerTrack');
+  const dots = document.getElementById('bannerDots');
+  track.innerHTML = bannerList.map(b => {
+    const imgTag = `<img src="${b.image_url}" alt="banner">`;
+    return b.link_url
+      ? `<a href="${b.link_url}" target="_blank" rel="noopener">${imgTag}</a>`
+      : `<div class="banner-slide">${imgTag}</div>`;
+  }).join('');
+  dots.innerHTML = bannerList.length > 1
+    ? bannerList.map((_, i) => `<div class="banner-dot ${i===0?'active':''}" onclick="goToBanner(${i})"></div>`).join('')
+    : '';
+  bannerIndex = 0;
+  updateBannerPosition();
+}
+
+function updateBannerPosition(){
+  const track = document.getElementById('bannerTrack');
+  track.style.transform = `translateX(-${bannerIndex * 100}%)`;
+  document.querySelectorAll('.banner-dot').forEach((d, i) => d.classList.toggle('active', i === bannerIndex));
+}
+
+function goToBanner(i){
+  bannerIndex = i;
+  updateBannerPosition();
+  startBannerAutoSlide(); // ম্যানুয়াল ক্লিকের পর টাইমার রিসেট
+}
+
+function startBannerAutoSlide(){
+  if(bannerTimer) clearInterval(bannerTimer);
+  bannerTimer = setInterval(() => {
+    bannerIndex = (bannerIndex + 1) % bannerList.length;
+    updateBannerPosition();
+  }, 3000);
 }
 
 // ============================================
@@ -956,9 +1099,10 @@ function checkAdminSession(){
     // Staff থেকে Stores ও Staff/Users ট্যাব এবং প্রোডাক্ট তৈরি/এডিট ফর্ম হাইড করা
     document.getElementById('tabBtnStores').style.display = isStaff ? 'none' : 'inline-block';
     document.getElementById('tabBtnUsers').style.display = isStaff ? 'none' : 'inline-block';
+    document.getElementById('tabBtnBanner').style.display = isStaff ? 'none' : 'inline-block';
     document.getElementById('productFormCard').style.display = isStaff ? 'none' : 'block';
     // Staff যদি ভুলবশত আগে Stores/Users ট্যাবে থেকে যায়, Products-এ ফিরিয়ে আনা
-    if(isStaff && (document.getElementById('tab-stores').classList.contains('show') || document.getElementById('tab-users').classList.contains('show'))){
+    if(isStaff && (document.getElementById('tab-stores').classList.contains('show') || document.getElementById('tab-users').classList.contains('show') || document.getElementById('tab-banner').classList.contains('show'))){
       document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.admin-panel-body').forEach(t => t.classList.remove('show'));
       document.querySelector('.admin-tab').classList.add('active');
@@ -1172,6 +1316,7 @@ async function loadAdminData(){
   const { data: stores } = await sb.from('stores').select('*').order('created_at', {ascending:false});
   const { data: prices } = await sb.from('prices').select('*, products(name), stores(name)').order('last_checked_at', {ascending:false});
   const users = isStaff ? [] : (await sb.rpc('list_all_users')).data;
+  const banners = isStaff ? [] : (await sb.from('banners').select('*').order('sort_order', {ascending:true})).data;
 
   allProducts = products || [];
   allStores = stores || [];
@@ -1179,7 +1324,10 @@ async function loadAdminData(){
   renderProductsTable(allProducts);
   if(!isStaff) renderStoresTable(allStores);
   renderPricesTable(prices || []);
-  if(!isStaff){ renderUsersTable(users || []); populateUserStoreDropdown(); toggleStoreField(); }
+  if(!isStaff){
+    renderUsersTable(users || []); populateUserStoreDropdown(); toggleStoreField();
+    renderBannersTable(banners || []);
+  }
   populatePriceDropdowns();
 }
 
@@ -1472,6 +1620,88 @@ async function deleteUser(id, email){
   else loadAdminData();
 }
 
+// ---------- BANNER CRUD ----------
+let allBanners = [];
+
+function renderBannersTable(list){
+  allBanners = list;
+  document.getElementById('bannersTableBody').innerHTML = list.map(b => `
+    <tr>
+      <td><img class="banner-thumb" src="${b.image_url}" alt=""></td>
+      <td style="font-size:11px; color:var(--text-dim); max-width:160px; overflow:hidden; text-overflow:ellipsis;">${b.link_url || '—'}</td>
+      <td><span class="badge-stock ${b.is_active ? 'badge-in' : 'badge-out'}">${b.is_active ? 'Active' : 'Inactive'}</span></td>
+      <td>${b.sort_order}</td>
+      <td class="actions-cell">
+        <button class="btn btn-sm btn-secondary" onclick="editBanner('${b.id}')">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteBanner('${b.id}')">Delete</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--text-dim);">No banners yet</td></tr>';
+}
+
+function editBanner(id){
+  const session = getSession();
+  if(session && session.role === 'staff') return;
+  const b = allBanners.find(x => x.id === id);
+  if(!b) return;
+  document.getElementById('bannerEditId').value = b.id;
+  document.getElementById('bImage').value = b.image_url || '';
+  document.getElementById('bLink').value = b.link_url || '';
+  document.getElementById('bActive').value = String(b.is_active);
+  document.getElementById('bOrder').value = b.sort_order || 0;
+  document.getElementById('bannerFormTitle').innerHTML = '✏️ <span lang-en>Edit Banner Slide</span><span lang-bn>ব্যানার স্লাইড এডিট করুন</span>';
+  document.getElementById('cancelBannerEditBtn').style.display = 'inline-block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function resetBannerForm(){
+  document.getElementById('bannerEditId').value = '';
+  document.getElementById('bImage').value = '';
+  document.getElementById('bLink').value = '';
+  document.getElementById('bActive').value = 'true';
+  document.getElementById('bOrder').value = '0';
+  document.getElementById('bannerFormTitle').innerHTML = '➕ <span lang-en>Add New Banner Slide</span><span lang-bn>নতুন ব্যানার স্লাইড যুক্ত করুন</span>';
+  document.getElementById('cancelBannerEditBtn').style.display = 'none';
+}
+
+async function saveBanner(){
+  const session = getSession();
+  if(session && session.role === 'staff') return; // staff ব্যানার ম্যানেজ করতে পারবে না
+  const id = document.getElementById('bannerEditId').value;
+  const image_url = document.getElementById('bImage').value.trim();
+  const link_url = document.getElementById('bLink').value.trim();
+  const is_active = document.getElementById('bActive').value === 'true';
+  const sort_order = parseInt(document.getElementById('bOrder').value) || 0;
+  const msgEl = document.getElementById('bannerMsg');
+  msgEl.innerHTML = '';
+
+  if(!image_url){
+    msgEl.innerHTML = '<div class="error-msg">Image URL is required</div>'; return;
+  }
+
+  const payload = { image_url, link_url, is_active, sort_order };
+  let res;
+  if(id) res = await sb.from('banners').update(payload).eq('id', id);
+  else res = await sb.from('banners').insert(payload);
+
+  if(res.error){
+    msgEl.innerHTML = `<div class="error-msg">Error: ${res.error.message}</div>`;
+  } else {
+    msgEl.innerHTML = '<div class="success-msg">Saved successfully ✓</div>';
+    resetBannerForm();
+    loadAdminData();
+    loadBanners(); // হোমপেজ স্লাইডারও রিফ্রেশ হবে
+  }
+}
+
+async function deleteBanner(id){
+  const session = getSession();
+  if(session && session.role === 'staff') return;
+  if(!confirm('Delete this banner slide?')) return;
+  const { error } = await sb.from('banners').delete().eq('id', id);
+  if(error) alert('Error: ' + error.message);
+  else { loadAdminData(); loadBanners(); }
+}
+
 // ---------- PRICES CRUD ----------
 let allPrices = []; // loadAdminData থেকে সব প্রাইস ক্যাশ রাখা হবে, staff filtering-এর জন্য
 
@@ -1590,6 +1820,7 @@ async function deletePrice(id, storeId){
 // INIT
 // ============================================
 loadUserData();
+loadBanners();
 const initialView = new URLSearchParams(window.location.search).get('view');
 if(initialView === 'account' || initialView === 'admin'){
   switchView(initialView);
