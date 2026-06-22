@@ -580,13 +580,13 @@
     <div class="admin-tabs">
       <button class="admin-tab active" onclick="switchAdminTab('products')"><span lang-en>Products</span><span lang-bn>প্রোডাক্ট</span></button>
       <button class="admin-tab" onclick="switchAdminTab('prices')"><span lang-en>Prices</span><span lang-bn>দাম</span></button>
-      <button class="admin-tab" onclick="switchAdminTab('stores')"><span lang-en>Stores</span><span lang-bn>শপ/স্টোর</span></button>
-      <button class="admin-tab" onclick="switchAdminTab('users')"><span lang-en>Staff/Users</span><span lang-bn>স্টাফ/ইউজার</span></button>
+      <button class="admin-tab" id="tabBtnStores" onclick="switchAdminTab('stores')"><span lang-en>Stores</span><span lang-bn>শপ/স্টোর</span></button>
+      <button class="admin-tab" id="tabBtnUsers" onclick="switchAdminTab('users')"><span lang-en>Staff/Users</span><span lang-bn>স্টাফ/ইউজার</span></button>
     </div>
 
     <!-- PRODUCTS TAB -->
     <div class="admin-panel-body show" id="tab-products">
-      <div class="form-card">
+      <div class="form-card" id="productFormCard">
         <h3 id="productFormTitle">➕ <span lang-en>Add New Product</span><span lang-bn>নতুন প্রোডাক্ট যুক্ত করুন</span></h3>
         <input type="hidden" id="productEditId">
         <div class="form-grid">
@@ -703,18 +703,21 @@
       <div class="form-card">
         <h3>➕ <span lang-en>Add New Staff/Admin</span><span lang-bn>নতুন স্টাফ/অ্যাডমিন যুক্ত করুন</span></h3>
         <p style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">
-          <span lang-en>Staff accounts have the same access as admin (manage products, prices, and stores).</span>
-          <span lang-bn>স্টাফ অ্যাকাউন্টের অ্যাডমিনের মতোই সব ক্ষমতা থাকবে (প্রোডাক্ট, দাম, শপ ম্যানেজ করা)।</span>
+          <span lang-en>Admin has full access. Staff can only add/edit/delete prices for their assigned store — they can view products but cannot create products or stores.</span>
+          <span lang-bn>Admin-এর সব ক্ষমতা থাকে। Staff শুধু তার নির্দিষ্ট শপের দাম যুক্ত/এডিট/ডিলিট করতে পারবে — প্রোডাক্ট দেখতে পারবে কিন্তু প্রোডাক্ট/শপ তৈরি করতে পারবে না।</span>
         </p>
         <div class="form-grid">
           <div class="field"><label><span lang-en>Name</span><span lang-bn>নাম</span></label><input id="uName" placeholder="John Doe"></div>
           <div class="field"><label><span lang-en>Email</span><span lang-bn>ইমেইল</span></label><input id="uEmail" type="email" placeholder="staff@checkpricebd.com"></div>
           <div class="field"><label><span lang-en>Password</span><span lang-bn>পাসওয়ার্ড</span></label><input id="uPassword" type="password" placeholder="At least 6 characters"></div>
           <div class="field"><label><span lang-en>Role</span><span lang-bn>রোল</span></label>
-            <select id="uRole">
+            <select id="uRole" onchange="toggleStoreField()">
               <option value="staff">Staff</option>
               <option value="admin">Admin</option>
             </select>
+          </div>
+          <div class="field full" id="uStoreField"><label><span lang-en>Assigned Store (staff can only manage prices for this store)</span><span lang-bn>নির্ধারিত শপ (staff শুধু এই শপের দাম ম্যানেজ করতে পারবে)</span></label>
+            <select id="uStore"></select>
           </div>
         </div>
         <div style="margin-top:14px;">
@@ -725,7 +728,7 @@
 
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th><span lang-en>Name</span><span lang-bn>নাম</span></th><th><span lang-en>Email</span><span lang-bn>ইমেইল</span></th><th><span lang-en>Role</span><span lang-bn>রোল</span></th><th><span lang-en>Action</span><span lang-bn>একশন</span></th></tr></thead>
+          <thead><tr><th><span lang-en>Name</span><span lang-bn>নাম</span></th><th><span lang-en>Email</span><span lang-bn>ইমেইল</span></th><th><span lang-en>Role</span><span lang-bn>রোল</span></th><th><span lang-en>Store</span><span lang-bn>শপ</span></th><th><span lang-en>Action</span><span lang-bn>একশন</span></th></tr></thead>
           <tbody id="usersTableBody"></tbody>
         </table>
       </div>
@@ -924,7 +927,7 @@ function renderProductGrid(list){
 }
 
 function openProduct(id){
-  window.open(`product.html?id=${id}`, '_blank');
+  window.location.href = `product.html?id=${id}`;
 }
 
 // ============================================
@@ -942,10 +945,24 @@ function checkAdminSession(){
   if(session && (session.role === 'admin' || session.role === 'staff')){
     document.getElementById('adminDashboard').style.display = 'block';
     document.getElementById('adminWelcome').textContent =
-      (currentLang === 'bn' ? 'স্বাগতম, ' : 'Welcome, ') + (session.name || session.email) + ` (${session.role})`;
+      (currentLang === 'bn' ? 'স্বাগতম, ' : 'Welcome, ') + (session.name || session.email) + ` (${session.role}${session.assigned_store_name ? ' — ' + session.assigned_store_name : ''})`;
     if(document.getElementById('pImagesList').children.length === 0){
       addImageField(); addSpecField(); addVideoField();
     }
+
+    const isStaff = session.role === 'staff';
+    // Staff থেকে Stores ও Staff/Users ট্যাব এবং প্রোডাক্ট তৈরি/এডিট ফর্ম হাইড করা
+    document.getElementById('tabBtnStores').style.display = isStaff ? 'none' : 'inline-block';
+    document.getElementById('tabBtnUsers').style.display = isStaff ? 'none' : 'inline-block';
+    document.getElementById('productFormCard').style.display = isStaff ? 'none' : 'block';
+    // Staff যদি ভুলবশত আগে Stores/Users ট্যাবে থেকে যায়, Products-এ ফিরিয়ে আনা
+    if(isStaff && (document.getElementById('tab-stores').classList.contains('show') || document.getElementById('tab-users').classList.contains('show'))){
+      document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.admin-panel-body').forEach(t => t.classList.remove('show'));
+      document.querySelector('.admin-tab').classList.add('active');
+      document.getElementById('tab-products').classList.add('show');
+    }
+
     loadAdminData();
   } else {
     switchView('account');
@@ -1146,29 +1163,36 @@ function switchAdminTab(tab){
 // ADMIN: LOAD ALL DATA
 // ============================================
 async function loadAdminData(){
+  const session = getSession();
+  const isStaff = session && session.role === 'staff';
+
   const { data: products } = await sb.from('products').select('*').order('created_at', {ascending:false});
   const { data: stores } = await sb.from('stores').select('*').order('created_at', {ascending:false});
   const { data: prices } = await sb.from('prices').select('*, products(name), stores(name)').order('last_checked_at', {ascending:false});
-  const { data: users } = await sb.rpc('list_all_users');
+  const users = isStaff ? [] : (await sb.rpc('list_all_users')).data;
 
   allProducts = products || [];
   allStores = stores || [];
 
   renderProductsTable(allProducts);
-  renderStoresTable(allStores);
+  if(!isStaff) renderStoresTable(allStores);
   renderPricesTable(prices || []);
-  renderUsersTable(users || []);
+  if(!isStaff){ renderUsersTable(users || []); populateUserStoreDropdown(); toggleStoreField(); }
   populatePriceDropdowns();
 }
 
 // ---------- PRODUCTS CRUD ----------
 function renderProductsTable(list){
+  const session = getSession();
+  const isStaff = session && session.role === 'staff';
   document.getElementById('productsTableBody').innerHTML = list.map(p => `
     <tr>
       <td>${p.name}</td><td>${p.brand||''}</td><td>${p.category}</td><td>${p.model_slug}</td>
       <td class="actions-cell">
+        ${isStaff ? '<span style="color:var(--text-dim); font-size:12px;">View only</span>' : `
         <button class="btn btn-sm btn-secondary" onclick="editProduct('${p.id}')">Edit</button>
         <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">Delete</button>
+        `}
       </td>
     </tr>`).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--text-dim);">No products yet</td></tr>';
 }
@@ -1207,6 +1231,8 @@ function clearDynFields(){
 }
 
 async function editProduct(id){
+  const session = getSession();
+  if(session && session.role === 'staff') return; // staff প্রোডাক্ট এডিট করতে পারবে না
   const p = allProducts.find(x => x.id === id);
   if(!p) return;
   document.getElementById('productEditId').value = p.id;
@@ -1247,6 +1273,8 @@ function resetProductForm(){
 }
 
 async function saveProduct(){
+  const session = getSession();
+  if(session && session.role === 'staff') return; // staff প্রোডাক্ট তৈরি/এডিট করতে পারবে না
   const id = document.getElementById('productEditId').value;
   const name = document.getElementById('pName').value.trim();
   const brand = document.getElementById('pBrand').value.trim();
@@ -1300,6 +1328,8 @@ async function saveProduct(){
 }
 
 async function deleteProduct(id){
+  const session = getSession();
+  if(session && session.role === 'staff') return; // staff প্রোডাক্ট ডিলিট করতে পারবে না
   if(!confirm('This product and all its prices will be deleted. Continue?')) return;
   const { error } = await sb.from('products').delete().eq('id', id);
   if(error) alert('Error: ' + error.message);
@@ -1340,6 +1370,8 @@ function resetStoreForm(){
 }
 
 async function saveStore(){
+  const session = getSession();
+  if(session && session.role === 'staff') return; // staff শপ তৈরি/এডিট করতে পারবে না
   const id = document.getElementById('storeEditId').value;
   const name = document.getElementById('sName').value.trim();
   const base_url = document.getElementById('sUrl').value.trim();
@@ -1365,6 +1397,8 @@ async function saveStore(){
 }
 
 async function deleteStore(id){
+  const session = getSession();
+  if(session && session.role === 'staff') return; // staff শপ ডিলিট করতে পারবে না
   if(!confirm('This store and all its prices will be deleted. Continue?')) return;
   const { error } = await sb.from('stores').delete().eq('id', id);
   if(error) alert('Error: ' + error.message);
@@ -1372,22 +1406,35 @@ async function deleteStore(id){
 }
 
 // ---------- USERS / STAFF CRUD ----------
+function toggleStoreField(){
+  const role = document.getElementById('uRole').value;
+  document.getElementById('uStoreField').style.display = role === 'staff' ? 'block' : 'none';
+}
+
+function populateUserStoreDropdown(){
+  document.getElementById('uStore').innerHTML = allStores.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+
 function renderUsersTable(list){
   document.getElementById('usersTableBody').innerHTML = list.map(u => `
     <tr>
       <td>${u.name || '—'}</td><td>${u.email}</td>
       <td><span class="badge-stock ${u.role === 'customer' ? 'badge-out' : 'badge-in'}" style="text-transform:capitalize;">${u.role}</span></td>
+      <td>${u.role === 'staff' ? (u.assigned_store_name || '<span style="color:var(--price-up);">Not set</span>') : '—'}</td>
       <td class="actions-cell">
         <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}', '${u.email}')">Delete</button>
       </td>
-    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">No users yet</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--text-dim);">No users yet</td></tr>';
 }
 
 async function addStaffUser(){
+  const session = getSession();
+  if(session && session.role === 'staff') return; // staff নতুন ইউজার তৈরি করতে পারবে না
   const name = document.getElementById('uName').value.trim();
   const email = document.getElementById('uEmail').value.trim();
   const password = document.getElementById('uPassword').value;
   const role = document.getElementById('uRole').value;
+  const storeId = document.getElementById('uStore').value;
   const msgEl = document.getElementById('userMsg');
   msgEl.innerHTML = '';
 
@@ -1397,8 +1444,14 @@ async function addStaffUser(){
   if(password.length < 6){
     msgEl.innerHTML = '<div class="error-msg">Password must be at least 6 characters</div>'; return;
   }
+  if(role === 'staff' && !storeId){
+    msgEl.innerHTML = '<div class="error-msg">Please select a store for this staff member</div>'; return;
+  }
 
-  const { error } = await sb.rpc('create_staff_user', { p_name: name, p_email: email, p_password: password, p_role: role });
+  const { error } = await sb.rpc('create_staff_user', {
+    p_name: name, p_email: email, p_password: password, p_role: role,
+    p_store_id: role === 'staff' ? storeId : null
+  });
   if(error){
     msgEl.innerHTML = `<div class="error-msg">${error.message.includes('duplicate') ? 'This email is already registered' : error.message}</div>`;
     return;
@@ -1409,6 +1462,8 @@ async function addStaffUser(){
 }
 
 async function deleteUser(id, email){
+  const session = getSession();
+  if(session && session.role === 'staff') return; // staff ইউজার ডিলিট করতে পারবে না
   if(!confirm(`Delete user ${email}? This cannot be undone.`)) return;
   const { error } = await sb.rpc('delete_user_by_id', { p_user_id: id });
   if(error) alert('Error: ' + error.message);
@@ -1416,13 +1471,32 @@ async function deleteUser(id, email){
 }
 
 // ---------- PRICES CRUD ----------
+let allPrices = []; // loadAdminData থেকে সব প্রাইস ক্যাশ রাখা হবে, staff filtering-এর জন্য
+
 function populatePriceDropdowns(){
+  const session = getSession();
   document.getElementById('prProduct').innerHTML = allProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-  document.getElementById('prStore').innerHTML = allStores.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+  if(session && session.role === 'staff'){
+    // Staff-এর জন্য শপ dropdown শুধু তার নিজের শপে লক করা, dropdown disabled
+    const myStore = allStores.find(s => s.id === session.assigned_store_id);
+    document.getElementById('prStore').innerHTML = myStore
+      ? `<option value="${myStore.id}">${myStore.name}</option>`
+      : `<option value="">No store assigned — contact admin</option>`;
+    document.getElementById('prStore').disabled = true;
+  } else {
+    document.getElementById('prStore').innerHTML = allStores.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    document.getElementById('prStore').disabled = false;
+  }
 }
 
 function renderPricesTable(list){
-  document.getElementById('pricesTableBody').innerHTML = list.map(pr => `
+  const session = getSession();
+  const isStaff = session && session.role === 'staff';
+  // Staff হলে শুধু নিজের শপের প্রাইস এন্ট্রি দেখাবে
+  const visibleList = isStaff ? list.filter(pr => pr.store_id === session.assigned_store_id) : list;
+
+  document.getElementById('pricesTableBody').innerHTML = visibleList.map(pr => `
     <tr>
       <td>${pr.products?.name || '—'}</td>
       <td>${pr.stores?.name || '—'}</td>
@@ -1431,15 +1505,20 @@ function renderPricesTable(list){
       <td style="font-size:11px; color:var(--text-dim);">${new Date(pr.last_checked_at).toLocaleDateString()}</td>
       <td class="actions-cell">
         <button class="btn btn-sm btn-secondary" onclick='editPrice(${JSON.stringify(pr).replace(/'/g,"&#39;")})'>Edit</button>
-        <button class="btn btn-sm btn-danger" onclick="deletePrice('${pr.id}')">Delete</button>
+        <button class="btn btn-sm btn-danger" onclick="deletePrice('${pr.id}', '${pr.store_id}')">Delete</button>
       </td>
-    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center; color:var(--text-dim);">No price entries yet</td></tr>';
+    </tr>`).join('') || `<tr><td colspan="6" style="text-align:center; color:var(--text-dim);">${isStaff ? 'No price entries for your store yet' : 'No price entries yet'}</td></tr>`;
 }
 
 function editPrice(pr){
+  const session = getSession();
+  if(session && session.role === 'staff' && pr.store_id !== session.assigned_store_id){
+    alert(currentLang === 'bn' ? 'আপনি শুধু নিজের শপের দাম এডিট করতে পারবেন।' : 'You can only edit prices for your assigned store.');
+    return;
+  }
   document.getElementById('priceEditId').value = pr.id;
   document.getElementById('prProduct').value = pr.product_id;
-  document.getElementById('prStore').value = pr.store_id;
+  if(!(session && session.role === 'staff')) document.getElementById('prStore').value = pr.store_id;
   document.getElementById('prPrice').value = pr.price;
   document.getElementById('prStock').value = String(pr.in_stock);
   document.getElementById('prUrl').value = pr.product_url;
@@ -1457,14 +1536,23 @@ function resetPriceForm(){
 }
 
 async function savePrice(){
+  const session = getSession();
   const id = document.getElementById('priceEditId').value;
   const product_id = document.getElementById('prProduct').value;
-  const store_id = document.getElementById('prStore').value;
+  let store_id = document.getElementById('prStore').value;
   const price = parseFloat(document.getElementById('prPrice').value);
   const in_stock = document.getElementById('prStock').value === 'true';
   const product_url = document.getElementById('prUrl').value.trim();
   const msgEl = document.getElementById('priceMsg');
   msgEl.innerHTML = '';
+
+  // Staff-এর জন্য শপ সবসময় তার assigned_store_id হবে, dropdown যা-ই থাকুক
+  if(session && session.role === 'staff'){
+    if(!session.assigned_store_id){
+      msgEl.innerHTML = '<div class="error-msg">No store assigned to your account. Contact admin.</div>'; return;
+    }
+    store_id = session.assigned_store_id;
+  }
 
   if(!product_id || !store_id || !price || !product_url){
     msgEl.innerHTML = '<div class="error-msg">Please fill in all fields</div>'; return;
@@ -1484,7 +1572,12 @@ async function savePrice(){
   }
 }
 
-async function deletePrice(id){
+async function deletePrice(id, storeId){
+  const session = getSession();
+  if(session && session.role === 'staff' && storeId !== session.assigned_store_id){
+    alert(currentLang === 'bn' ? 'আপনি শুধু নিজের শপের দাম ডিলিট করতে পারবেন।' : 'You can only delete prices for your assigned store.');
+    return;
+  }
   if(!confirm('Delete this price entry?')) return;
   const { error } = await sb.from('prices').delete().eq('id', id);
   if(error) alert('Error: ' + error.message);
