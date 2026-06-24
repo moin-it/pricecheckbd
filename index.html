@@ -436,6 +436,22 @@
     background:var(--card); border:1px solid var(--border);
     border-radius:14px; overflow-x:auto; padding:4px;
   }
+  .admin-filter-row{
+    display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap;
+  }
+  .admin-filter-input{
+    flex:1; min-width:180px; background:var(--card); border:1px solid var(--border);
+    color:var(--text); padding:10px 14px; border-radius:9px; font-size:13.5px; outline:none;
+    font-family:inherit;
+  }
+  .admin-filter-input:focus{border-color:var(--accent);}
+  .admin-filter-select{
+    background:var(--card); border:1px solid var(--border);
+    color:var(--text); padding:10px 14px; border-radius:9px; font-size:13.5px; outline:none;
+    font-family:inherit; min-width:150px;
+  }
+  .admin-filter-select:focus{border-color:var(--accent);}
+  .filter-empty-row td{text-align:center; color:var(--text-dim); padding:16px;}
   .form-card{
     background:var(--card); border:1px solid var(--border);
     border-radius:16px; padding:18px; margin-bottom:18px;
@@ -599,6 +615,31 @@
       </div>
       <button class="btn" onclick="customerLogin()"><span lang-en>Log In</span><span lang-bn>লগইন করুন</span></button>
       <div id="custLoginMsg"></div>
+      <p style="text-align:center; margin-top:14px;">
+        <a href="#" onclick="showForgotPasswordForm(); return false;" style="font-size:13px; color:var(--blue); font-weight:600;">
+          <span lang-en>Forgot password?</span><span lang-bn>পাসওয়ার্ড ভুলে গেছেন?</span>
+        </a>
+      </p>
+    </div>
+
+    <!-- পাসওয়ার্ড ভুলে গেছি — ইমেইল চাওয়ার ফর্ম -->
+    <div class="login-box" id="forgotPasswordBox" style="display:none;">
+      <h2>🔑 <span lang-en>Reset Password</span><span lang-bn>পাসওয়ার্ড রিসেট করুন</span></h2>
+      <p style="font-size:13px; color:var(--text-dim); margin-bottom:14px;">
+        <span lang-en>Enter your email and we'll send you a link to reset your password.</span>
+        <span lang-bn>আপনার ইমেইল দিন, আমরা একটা রিসেট লিংক পাঠিয়ে দিব।</span>
+      </p>
+      <div class="field">
+        <label><span lang-en>Email</span><span lang-bn>ইমেইল</span></label>
+        <input type="email" id="forgotEmail" placeholder="you@example.com">
+      </div>
+      <button class="btn" onclick="sendPasswordResetEmail()"><span lang-en>Send Reset Link</span><span lang-bn>রিসেট লিংক পাঠান</span></button>
+      <div id="forgotMsg"></div>
+      <p style="text-align:center; margin-top:14px;">
+        <a href="#" onclick="hideForgotPasswordForm(); return false;" style="font-size:13px; color:var(--text-dim); font-weight:600;">
+          ← <span lang-en>Back to Log In</span><span lang-bn>লগইনে ফিরে যান</span>
+        </a>
+      </p>
     </div>
 
     <div class="login-box" id="customerSignupBox" style="display:none;">
@@ -710,6 +751,13 @@
         <div id="productMsg"></div>
       </div>
 
+      <div class="admin-filter-row">
+        <input type="text" id="productFilterName" class="admin-filter-input" placeholder="Search by name..." oninput="filterProductsTable()">
+        <select id="productFilterBrand" class="admin-filter-select" onchange="filterProductsTable()">
+          <option value="">All Brands</option>
+        </select>
+      </div>
+
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr><th><span lang-en>Name</span><span lang-bn>নাম</span></th><th><span lang-en>Brand</span><span lang-bn>ব্র্যান্ড</span></th><th><span lang-en>Category</span><span lang-bn>ক্যাটাগরি</span></th><th>Slug</th><th><span lang-en>Action</span><span lang-bn>একশন</span></th></tr></thead>
@@ -737,6 +785,13 @@
           <button class="btn btn-secondary" style="width:auto; display:none;" id="cancelPriceEditBtn" onclick="resetPriceForm()"><span lang-en>Cancel</span><span lang-bn>বাতিল</span></button>
         </div>
         <div id="priceMsg"></div>
+      </div>
+
+      <div class="admin-filter-row">
+        <input type="text" id="priceFilterName" class="admin-filter-input" placeholder="Search by product or store..." oninput="filterPricesTable()">
+        <select id="priceFilterBrand" class="admin-filter-select" onchange="filterPricesTable()">
+          <option value="">All Brands</option>
+        </select>
       </div>
 
       <div class="table-wrap">
@@ -1272,6 +1327,73 @@ function customerLogout(){
 }
 
 // ============================================
+// FORGOT PASSWORD
+// ============================================
+// ⚠️ এখানে আপনার ডিপ্লয় করা Supabase Edge Function-এর URL বসান।
+// Edge Function deploy করার পর Supabase ড্যাশবোর্ডে Edge Functions সেকশনে গিয়ে
+// URL কপি করে এখানে বসিয়ে দিন। ফরম্যাট সাধারণত এরকম:
+// https://<your-project-ref>.supabase.co/functions/v1/send-reset-email
+const RESET_EMAIL_FUNCTION_URL = ''; // <-- এখানে Edge Function URL বসান
+
+function showForgotPasswordForm(){
+  document.getElementById('customerLoginBox').style.display = 'none';
+  document.getElementById('forgotPasswordBox').style.display = 'block';
+}
+
+function hideForgotPasswordForm(){
+  document.getElementById('forgotPasswordBox').style.display = 'none';
+  document.getElementById('customerLoginBox').style.display = 'block';
+  document.getElementById('forgotMsg').innerHTML = '';
+}
+
+async function sendPasswordResetEmail(){
+  const email = document.getElementById('forgotEmail').value.trim();
+  const msgEl = document.getElementById('forgotMsg');
+  msgEl.innerHTML = '';
+
+  if(!email){
+    msgEl.innerHTML = '<div class="error-msg">Please enter your email</div>'; return;
+  }
+
+  if(!RESET_EMAIL_FUNCTION_URL){
+    msgEl.innerHTML = `<div class="error-msg">
+      ${currentLang === 'bn' ? 'ইমেইল সার্ভিস এখনো সেটআপ করা হয়নি। ডেভেলপারকে জানান।' : 'Email service is not configured yet. Please contact the site admin.'}
+    </div>`;
+    return;
+  }
+
+  // ধাপ ১: ডাটাবেজে টোকেন তৈরি করা
+  const { data, error } = await sb.rpc('request_password_reset', { p_email: email });
+
+  // নিরাপত্তার জন্য ইমেইল রেজিস্টার্ড থাকুক বা না থাকুক, একই বার্তা দেখানো হয়
+  // (email enumeration আক্রমণ ঠেকানোর জন্য — কেউ বুঝতে পারবে না কোন ইমেইল রেজিস্টার্ড)
+  const genericMsg = currentLang === 'bn'
+    ? 'যদি এই ইমেইলটি রেজিস্টার্ড থাকে, একটা রিসেট লিংক পাঠানো হয়েছে। ইনবক্স/স্প্যাম চেক করুন।'
+    : 'If this email is registered, a reset link has been sent. Please check your inbox/spam folder.';
+
+  if(error || !data || data.length === 0){
+    msgEl.innerHTML = `<div class="success-msg">${genericMsg}</div>`;
+    return;
+  }
+
+  // ধাপ ২: Edge Function কল করে আসল ইমেইল পাঠানো
+  const { token, user_name, user_email } = data[0];
+  const resetLink = `${window.location.origin}${window.location.pathname.replace('index.html','')}reset-password.html?token=${token}`;
+
+  try{
+    await fetch(RESET_EMAIL_FUNCTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user_email, name: user_name, resetLink })
+    });
+  } catch(e){
+    console.error('Reset email send failed:', e);
+  }
+
+  msgEl.innerHTML = `<div class="success-msg">${genericMsg}</div>`;
+}
+
+// ============================================
 // CUSTOMER: WISHLIST
 // ============================================
 async function loadWishlist(){
@@ -1349,16 +1471,19 @@ async function loadAdminData(){
 
   const { data: products } = await sb.from('products').select('*').order('created_at', {ascending:false});
   const { data: stores } = await sb.from('stores').select('*').order('created_at', {ascending:false});
-  const { data: prices } = await sb.from('prices').select('*, products(name), stores(name)').order('last_checked_at', {ascending:false});
+  const { data: prices } = await sb.from('prices').select('*, products(name, brand), stores(name)').order('last_checked_at', {ascending:false});
   const users = isStaff ? [] : (await sb.rpc('list_all_users')).data;
   const banners = isStaff ? [] : (await sb.from('banners').select('*').order('sort_order', {ascending:true})).data;
 
   allProducts = products || [];
   allStores = stores || [];
+  allPrices = prices || [];
 
   renderProductsTable(allProducts);
+  populateProductFilterBrands();
   if(!isStaff) renderStoresTable(allStores);
-  renderPricesTable(prices || []);
+  renderPricesTable(allPrices);
+  populatePriceFilterBrands();
   if(!isStaff){
     renderUsersTable(users || []); populateUserStoreDropdown(); toggleStoreField();
     renderBannersTable(banners || []);
@@ -1379,7 +1504,24 @@ function renderProductsTable(list){
         <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">Delete</button>
         `}
       </td>
-    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--text-dim);">No products yet</td></tr>';
+    </tr>`).join('') || '<tr class="filter-empty-row"><td colspan="5">No products found</td></tr>';
+}
+
+function populateProductFilterBrands(){
+  const select = document.getElementById('productFilterBrand');
+  const currentVal = select.value;
+  const brands = [...new Set(allProducts.map(p => p.brand).filter(Boolean))].sort();
+  select.innerHTML = '<option value="">All Brands</option>' + brands.map(b => `<option value="${b}">${b}</option>`).join('');
+  select.value = currentVal; // আগের সিলেকশন থাকলে রাখা হবে
+}
+
+function filterProductsTable(){
+  const nameQuery = document.getElementById('productFilterName').value.trim().toLowerCase();
+  const brandFilter = document.getElementById('productFilterBrand').value;
+  let filtered = allProducts;
+  if(nameQuery) filtered = filtered.filter(p => p.name.toLowerCase().includes(nameQuery));
+  if(brandFilter) filtered = filtered.filter(p => p.brand === brandFilter);
+  renderProductsTable(filtered);
 }
 
 // ---------- DYNAMIC FIELD HELPERS (images / specs / videos) ----------
@@ -1842,7 +1984,27 @@ function renderPricesTable(list){
         <button class="btn btn-sm btn-secondary" onclick='editPrice(${JSON.stringify(pr).replace(/'/g,"&#39;")})'>Edit</button>
         <button class="btn btn-sm btn-danger" onclick="deletePrice('${pr.id}', '${pr.store_id}')">Delete</button>
       </td>
-    </tr>`).join('') || `<tr><td colspan="6" style="text-align:center; color:var(--text-dim);">${isStaff ? 'No price entries for your store yet' : 'No price entries yet'}</td></tr>`;
+    </tr>`).join('') || `<tr class="filter-empty-row"><td colspan="6">${isStaff ? 'No price entries for your store yet' : 'No price entries found'}</td></tr>`;
+}
+
+function populatePriceFilterBrands(){
+  const select = document.getElementById('priceFilterBrand');
+  const currentVal = select.value;
+  const brands = [...new Set(allProducts.map(p => p.brand).filter(Boolean))].sort();
+  select.innerHTML = '<option value="">All Brands</option>' + brands.map(b => `<option value="${b}">${b}</option>`).join('');
+  select.value = currentVal;
+}
+
+function filterPricesTable(){
+  const query = document.getElementById('priceFilterName').value.trim().toLowerCase();
+  const brandFilter = document.getElementById('priceFilterBrand').value;
+  let filtered = allPrices;
+  if(query) filtered = filtered.filter(pr =>
+    (pr.products?.name || '').toLowerCase().includes(query) ||
+    (pr.stores?.name || '').toLowerCase().includes(query)
+  );
+  if(brandFilter) filtered = filtered.filter(pr => pr.products?.brand === brandFilter);
+  renderPricesTable(filtered);
 }
 
 function editPrice(pr){
