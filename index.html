@@ -314,6 +314,39 @@
   @media (min-width:560px){ .grid{grid-template-columns:repeat(3, 1fr);} }
   @media (min-width:860px){ .grid{grid-template-columns:repeat(4, 1fr);} }
 
+  /* ---------- PAGINATION ---------- */
+  .pagination{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    flex-wrap:wrap;
+    margin:24px 0 8px;
+  }
+  .pagination button{
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    min-width:36px;
+    height:36px;
+    padding:0 10px;
+    border-radius:9px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:var(--font-display);
+  }
+  .pagination button.active{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+  .pagination button:disabled{opacity:.4; cursor:not-allowed;}
+  .pagination .pg-ellipsis{color:var(--text-dim); font-size:13px; padding:0 2px;}
+  .pagination .pg-info{
+    width:100%;
+    text-align:center;
+    font-size:12px;
+    color:var(--text-dim);
+    margin-bottom:6px;
+  }
+
   .product-card{
     background:var(--card);
     border:1px solid var(--border);
@@ -400,6 +433,14 @@
     outline:none; font-family:inherit;
   }
   .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--accent);}
+  .gsma-paste-box{
+    background:rgba(29,95,214,.05);
+    border:1.5px dashed var(--blue);
+    border-radius:12px;
+    padding:12px 14px;
+  }
+  .gsma-paste-box label{color:var(--blue); font-size:13px;}
+  .gsma-paste-box textarea{background:var(--card);}
   .btn{
     background:var(--accent); color:var(--accent-ink); border:none; padding:12px 20px;
     border-radius:10px; font-weight:700; cursor:pointer; font-size:14px; width:100%;
@@ -573,6 +614,7 @@
     <div class="chips" id="categoryChips"></div>
     <div class="chips chips-brand" id="brandChips"></div>
     <div id="productGrid" class="grid"></div>
+    <div id="productPagination" class="pagination"></div>
     <div id="userEmptyState" class="empty-state" style="display:none;">
       <span lang-en>No products found. Try a different search.</span>
       <span lang-bn>কোনো প্রোডাক্ট পাওয়া যায়নি। অন্য নামে চেষ্টা করুন।</span>
@@ -732,6 +774,19 @@
           <textarea id="pDescription" rows="4" placeholder="Write a detailed description of this product..."></textarea>
         </div>
 
+        <div class="field full gsma-paste-box" style="margin-top:14px;">
+          <label>📋 <span lang-en>Auto-fill specs from GSMArena (paste the full spec page text below)</span><span lang-bn>GSMArena থেকে স্পেক অটো-ফিল করুন (নিচে স্পেক পেজের পুরো টেক্সট পেস্ট করুন)</span></label>
+          <p style="font-size:11px; color:var(--text-dim); margin:2px 0 8px;">
+            <span lang-en>Open the phone's page on gsmarena.com → select all text on the page (Ctrl/Cmd+A) → copy → paste here. RAM, ROM, Display, CPU, GPU, Battery and other specs will be detected automatically.</span>
+            <span lang-bn>gsmarena.com এ ফোনের পেজ খুলুন → পুরো পেজের টেক্সট সিলেক্ট করুন (Ctrl/Cmd+A) → কপি করুন → এখানে পেস্ট করুন। RAM, ROM, Display, CPU, GPU, Battery ইত্যাদি স্পেক স্বয়ংক্রিয়ভাবে বসে যাবে।</span>
+          </p>
+          <textarea id="gsmaPasteArea" rows="4" placeholder="Paste GSMArena page text here..." style="font-family:monospace; font-size:12px;"></textarea>
+          <div style="display:flex; gap:8px; margin-top:8px; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" style="width:auto;" onclick="parseGsmArenaSpecs()">⚡ <span lang-en>Parse &amp; Fill Specs</span><span lang-bn>পার্স করে স্পেক ভরুন</span></button>
+            <span id="gsmaParseStatus" style="font-size:12px;"></span>
+          </div>
+        </div>
+
         <div class="field full" style="margin-top:12px;">
           <label><span lang-en>Specifications</span><span lang-bn>স্পেসিফিকেশন</span></label>
           <div id="pSpecsList"></div>
@@ -772,6 +827,15 @@
         <h3 id="priceFormTitle">➕ <span lang-en>Add New Price</span><span lang-bn>নতুন দাম যুক্ত করুন</span></h3>
         <input type="hidden" id="priceEditId">
         <div class="form-grid">
+          <div class="field full">
+            <label><span lang-en>Find Product</span><span lang-bn>প্রোডাক্ট খুঁজুন</span></label>
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+              <select id="prBrandFilter" class="admin-filter-select" style="flex:0 0 160px;" onchange="filterPriceProductOptions()">
+                <option value="">All Brands</option>
+              </select>
+              <input type="text" id="prProductSearch" class="admin-filter-input" placeholder="Search product name..." oninput="filterPriceProductOptions()">
+            </div>
+          </div>
           <div class="field"><label><span lang-en>Product</span><span lang-bn>প্রোডাক্ট</span></label><select id="prProduct"></select></div>
           <div class="field"><label><span lang-en>Store</span><span lang-bn>শপ</span></label><select id="prStore"></select></div>
           <div class="field"><label><span lang-en>Price (BDT)</span><span lang-bn>দাম (টাকা)</span></label><input type="number" id="prPrice" placeholder="21990"></div>
@@ -929,6 +993,8 @@ let allStores = [];
 let activeCategory = 'all';
 let activeBrand = null;
 let currentLang = 'en';
+let currentPage = 1;
+const PRODUCTS_PER_PAGE = 20;
 
 // ============================================
 // LANGUAGE TOGGLE
@@ -1076,6 +1142,7 @@ function renderBrandChips(){
 
 function filterBrand(brand){
   activeBrand = brand;
+  currentPage = 1;
   renderBrandChips();
   searchProducts();
 }
@@ -1083,6 +1150,7 @@ function filterBrand(brand){
 function filterCategory(cat){
   activeCategory = cat;
   activeBrand = null;
+  currentPage = 1;
   renderCategoryChips();
   searchProducts();
 }
@@ -1098,7 +1166,7 @@ function searchProducts(){
   renderProductGrid(filtered);
   renderSearchSuggestions(q);
 }
-document.getElementById('searchInput').addEventListener('input', searchProducts);
+document.getElementById('searchInput').addEventListener('input', () => { currentPage = 1; searchProducts(); });
 document.getElementById('searchInput').addEventListener('focus', () => {
   renderSearchSuggestions(document.getElementById('searchInput').value.trim().toLowerCase());
 });
@@ -1138,13 +1206,23 @@ function selectSuggestion(id){
 function renderProductGrid(list){
   const grid = document.getElementById('productGrid');
   const empty = document.getElementById('userEmptyState');
+  const pager = document.getElementById('productPagination');
   if(list.length === 0){
-    grid.innerHTML = ''; empty.style.display = 'block'; return;
+    grid.innerHTML = ''; empty.style.display = 'block'; pager.innerHTML = ''; return;
   }
   empty.style.display = 'none';
+
+  // পেজ সংখ্যার বাইরে চলে গেলে (যেমন ফিল্টার পরিবর্তনে রেজাল্ট কমে গেলে) শেষ ভ্যালিড পেজে নামিয়ে আনা হচ্ছে
+  const totalPages = Math.max(1, Math.ceil(list.length / PRODUCTS_PER_PAGE));
+  if(currentPage > totalPages) currentPage = totalPages;
+  if(currentPage < 1) currentPage = 1;
+
+  const startIdx = (currentPage - 1) * PRODUCTS_PER_PAGE;
+  const pageItems = list.slice(startIdx, startIdx + PRODUCTS_PER_PAGE);
+
   const storesLabel = currentLang === 'bn' ? 'টি শপে পাওয়া যাচ্ছে' : 'stores available';
   const noPriceLabel = currentLang === 'bn' ? 'দাম পাওয়া যায়নি' : 'Price unavailable';
-  grid.innerHTML = list.map(p => {
+  grid.innerHTML = pageItems.map(p => {
     const validPrices = p.prices.filter(pr => pr.price).map(pr => pr.price);
     const min = validPrices.length ? Math.min(...validPrices) : null;
     const max = validPrices.length ? Math.max(...validPrices) : null;
@@ -1159,6 +1237,45 @@ function renderProductGrid(list){
         <div class="store-count">${p.prices.length} ${storesLabel}</div>
       </div>`;
   }).join('');
+
+  renderPagination(list.length, totalPages);
+}
+
+function renderPagination(totalItems, totalPages){
+  const pager = document.getElementById('productPagination');
+  if(totalPages <= 1){ pager.innerHTML = ''; return; }
+
+  const infoLabel = currentLang === 'bn'
+    ? `মোট ${totalItems} টি প্রোডাক্ট — পেজ ${currentPage} / ${totalPages}`
+    : `${totalItems} products — page ${currentPage} of ${totalPages}`;
+
+  // কোন পেজ নাম্বারগুলো দেখানো হবে তা নির্ধারণ (বর্তমান পেজের আশেপাশে কয়েকটা + শুরু/শেষ)
+  const pages = new Set([1, totalPages, currentPage, currentPage - 1, currentPage + 1]);
+  const sorted = [...pages].filter(p => p >= 1 && p <= totalPages).sort((a,b) => a-b);
+
+  let buttons = '';
+  let prevP = 0;
+  for(const p of sorted){
+    if(prevP && p - prevP > 1) buttons += `<span class="pg-ellipsis">…</span>`;
+    buttons += `<button class="${p===currentPage?'active':''}" onclick="goToPage(${p})">${p}</button>`;
+    prevP = p;
+  }
+
+  const prevLabel = currentLang === 'bn' ? '←' : '←';
+  const nextLabel = currentLang === 'bn' ? '→' : '→';
+
+  pager.innerHTML = `
+    <div class="pg-info">${infoLabel}</div>
+    <button onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>${prevLabel}</button>
+    ${buttons}
+    <button onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>${nextLabel}</button>
+  `;
+}
+
+function goToPage(p){
+  currentPage = p;
+  searchProducts();
+  document.getElementById('productGrid').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function openProduct(id){
@@ -1557,6 +1674,231 @@ function clearDynFields(){
   document.getElementById('pVideosList').innerHTML = '';
 }
 
+// ---------- GSMArena PASTE PARSER ----------
+// ইউজার GSMArena-র স্পেক পেজের পুরো টেক্সট কপি করে পেস্ট করলে এই ফাংশন সেটা থেকে
+// RAM, ROM, Display, CPU, GPU, Battery ইত্যাদি গুরুত্বপূর্ণ স্পেক বের করে ফিল্ডে ভরে দেয়।
+// এটা শুধুমাত্র ইউজারের পেস্ট করা টেক্সট প্রসেস করে — কোনো নেটওয়ার্ক কল বা স্ক্র্যাপিং করে না।
+//
+// GSMArena-তে label আর value কখনো একই লাইনে (ট্যাব/একাধিক স্পেস দিয়ে আলাদা),
+// কখনো আলাদা আলাদা লাইনে থাকে। তাই প্রথমে পুরো টেক্সট থেকে একটা label → value[] ম্যাপ বানানো হয়,
+// তারপর সেই ম্যাপ থেকে প্রতিটা টার্গেট স্পেক বের করা হয়। এটা ফরম্যাট ভেদে অনেক বেশি নিরাপদ।
+
+// GSMArena-তে দেখা সব পরিচিত স্পেক-লেবেল (এগুলোর কোনো একটায় মিললেই বুঝা যায় এটা label, পরের টেক্সট value)
+const GSMA_KNOWN_LABELS = [
+  'Network','Technology','2G bands','3G bands','4G bands','5G bands','Speed',
+  'Launch','Announced','Status',
+  'Body','Dimensions','Weight','Build','SIM','IP rating',
+  'Display Type','Display','Type','Size','Resolution','Protection',
+  'Platform','OS','Chipset','CPU','GPU',
+  'Memory','Card slot','Internal',
+  'Main Camera','Selfie camera','Features',
+  'Sound','Loudspeaker','3.5mm jack',
+  'Comms','WLAN','Bluetooth','Positioning','NFC','Radio','USB',
+  'Battery','Charging',
+  'Misc','Colors','Models','Price'
+];
+
+function buildGsmaLabelMap(text){
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const map = {}; // lowercased label -> array of value-lines collected
+
+  // দৈর্ঘ্য অনুযায়ী বড় থেকে ছোট সাজানো হচ্ছে, যাতে "Display Type" সবসময় "Display"-এর
+  // আগে ম্যাচ হয় (নাহলে ছোট লেবেল "Display" আগে ম্যাচ করে ভুল রেজাল্ট দিতে পারে)
+  const sortedLabels = [...GSMA_KNOWN_LABELS].sort((a, b) => b.length - a.length);
+
+  function pushVal(label, val){
+    const k = label.toLowerCase();
+    if(!val) return;
+    if(!map[k]) map[k] = [];
+    map[k].push(val);
+  }
+
+  function isKnownLabelLine(line){
+    const lower = line.toLowerCase();
+    return sortedLabels.some(l => {
+      const ll = l.toLowerCase();
+      if(lower === ll) return true;
+      // লাইন একটা লেবেল দিয়ে শুরু হয়ে তারপর ট্যাব/স্পেস/কোলন থাকলে এটাও একটা নতুন label-value লাইন
+      if(lower.startsWith(ll)){
+        const rest = line.slice(l.length);
+        return /^[\s\t]{1,}\S/.test(rest) || /^:/.test(rest.trim());
+      }
+      return false;
+    });
+  }
+
+  for(let i = 0; i < lines.length; i++){
+    const line = lines[i];
+
+    let matchedLabel = null;
+    for(const label of sortedLabels){
+      if(line.toLowerCase() === label.toLowerCase()){
+        matchedLabel = label;
+        // লেবেলটাই পুরো লাইন — value পরের লাইন(গুলো)তে, যতক্ষণ না নতুন known label আসে
+        // (যেমন "Main Camera" এর পরে কয়েক লাইনে ক্যামেরার ডিটেইলস থাকে, যেগুলো নিজে label না)
+        let j = i + 1;
+        let collected = [];
+        while(j < lines.length && !isKnownLabelLine(lines[j]) && collected.length < 5){
+          collected.push(lines[j]);
+          j++;
+        }
+        if(collected.length) pushVal(label, collected.join(', '));
+        break;
+      }
+      // লাইন লেবেল দিয়ে শুরু হয়ে তারপর কমপক্ষে ২ স্পেস/ট্যাব পরে ভ্যালু (একই লাইনে)
+      if(line.toLowerCase().startsWith(label.toLowerCase())){
+        const rest = line.slice(label.length);
+        if(/^[\s\t]{1,}\S/.test(rest) || /^:/.test(rest.trim())){
+          matchedLabel = label;
+          const firstVal = rest.replace(/^:/,'').trim();
+          // কিছু লেবেলে (যেমন Main Camera: "Dual") প্রথম লাইনের পর আরও ডিটেইল-লাইন
+          // (ক্যামেরা MP ইত্যাদি) আসতে পারে যেগুলো নিজে কোনো label না — সেগুলোও যুক্ত করা হচ্ছে
+          let j = i + 1;
+          let collected = [firstVal];
+          while(j < lines.length && !isKnownLabelLine(lines[j]) && collected.length < 6){
+            collected.push(lines[j]);
+            j++;
+          }
+          pushVal(label, collected.filter(Boolean).join(', '));
+          break;
+        }
+      }
+    }
+  }
+  return map;
+}
+
+function gsmaFirstVal(map, ...labels){
+  for(const l of labels){
+    const v = map[l.toLowerCase()];
+    if(v && v.length) return v.join(', ');
+  }
+  return '';
+}
+
+function parseGsmArenaSpecs(){
+  const raw = document.getElementById('gsmaPasteArea').value;
+  const statusEl = document.getElementById('gsmaParseStatus');
+  if(!raw || raw.trim().length < 30){
+    statusEl.innerHTML = `<span style="color:var(--price-up);">${currentLang === 'bn' ? 'টেক্সট পেস্ট করুন প্রথমে' : 'Paste some text first'}</span>`;
+    return;
+  }
+
+  const text = raw.replace(/\r/g, '');
+  const map = buildGsmaLabelMap(text);
+  const found = {};
+
+  // ---- Display: Type + Size + Resolution মিলিয়ে একটা লাইনে ----
+  {
+    const typeRaw = gsmaFirstVal(map, 'Display Type', 'Display', 'Type');
+    const sizeRaw = gsmaFirstVal(map, 'Size');
+    const resRaw = gsmaFirstVal(map, 'Resolution');
+    const typeMatch = typeRaw.match(/\b(AMOLED|Super AMOLED|IPS LCD|OLED|P-OLED|LTPO|TFT|Dynamic AMOLED)\b/i);
+    const sizeMatch = sizeRaw.match(/(\d+(?:\.\d+)?)\s*(?:"|″|inches)/i);
+    const resMatch = resRaw.match(/(\d{3,4}\s*[x×]\s*\d{3,4})/i);
+    let out = [];
+    if(typeMatch) out.push(typeMatch[1]); else if(typeRaw) out.push(typeRaw.split(',')[0].trim());
+    if(sizeMatch) out.push(sizeMatch[1] + '"');
+    if(resMatch) out.push(resMatch[1].replace(/\s+/g,''));
+    if(out.length) found['Display'] = out.join(', ');
+  }
+
+  // ---- Chipset / CPU / GPU ----
+  {
+    const chipsetRaw = gsmaFirstVal(map, 'Chipset');
+    if(chipsetRaw) found['Chipset'] = chipsetRaw.split(',')[0].trim();
+    const cpuRaw = gsmaFirstVal(map, 'CPU');
+    if(cpuRaw) found['CPU'] = cpuRaw.split(',')[0].trim();
+    const gpuRaw = gsmaFirstVal(map, 'GPU');
+    if(gpuRaw) found['GPU'] = gpuRaw.split(',')[0].trim();
+  }
+
+  // ---- RAM + Storage (একসাথে "Internal" লেবেলে আসে, যেমন "256GB 8GB RAM, 512GB 12GB RAM") ----
+  {
+    const internalRaw = gsmaFirstVal(map, 'Internal');
+    if(internalRaw){
+      const ramMatches = [...internalRaw.matchAll(/(\d+)\s*GB\s*RAM/gi)].map(m => m[1] + 'GB');
+      const storageMatches = [...internalRaw.matchAll(/(\d+)\s*GB(?!\s*RAM)/gi)].map(m => m[1] + 'GB');
+      if(ramMatches.length) found['RAM'] = [...new Set(ramMatches)].join(' / ');
+      if(storageMatches.length) found['Storage (ROM)'] = [...new Set(storageMatches)].join(' / ');
+    }
+  }
+
+  // ---- Battery + Charging ----
+  {
+    const battRaw = gsmaFirstVal(map, 'Battery', 'Type');
+    const battMatch = battRaw.match(/(\d{3,5})\s*mAh/i);
+    if(battMatch) found['Battery'] = battMatch[1] + ' mAh';
+    const chargeRaw = gsmaFirstVal(map, 'Charging');
+    if(chargeRaw) found['Charging'] = chargeRaw.split(',')[0].trim();
+  }
+
+  // ---- OS ----
+  {
+    const osRaw = gsmaFirstVal(map, 'OS');
+    if(osRaw) found['OS'] = osRaw.split(',')[0].trim();
+  }
+
+  // ---- Camera ----
+  {
+    const mainCamRaw = gsmaFirstVal(map, 'Main Camera');
+    if(mainCamRaw){
+      const matches = [...mainCamRaw.matchAll(/(\d+(?:\.\d+)?)\s*MP/gi)].map(m => m[1] + 'MP');
+      if(matches.length) found['Main Camera'] = matches.join(' + ');
+    }
+    const selfieRaw = gsmaFirstVal(map, 'Selfie camera');
+    if(selfieRaw){
+      const matches = [...selfieRaw.matchAll(/(\d+(?:\.\d+)?)\s*MP/gi)].map(m => m[1] + 'MP');
+      if(matches.length) found['Selfie Camera'] = matches.join(' + ');
+    }
+  }
+
+  // ---- Weight / Build ----
+  {
+    const weightRaw = gsmaFirstVal(map, 'Weight');
+    const weightMatch = weightRaw.match(/(\d+(?:\.\d+)?)\s*g\b/i);
+    if(weightMatch) found['Weight'] = weightMatch[1] + 'g';
+    const buildRaw = gsmaFirstVal(map, 'Build');
+    if(buildRaw) found['Body / Build'] = buildRaw.split(',')[0].trim();
+  }
+
+  // ---- Network ----
+  {
+    const techRaw = gsmaFirstVal(map, 'Technology');
+    if(techRaw) found['Network'] = techRaw.split(',')[0].trim();
+  }
+
+  // ---- Release Date ----
+  {
+    const announcedRaw = gsmaFirstVal(map, 'Announced', 'Status');
+    const yearMatch = announcedRaw.match(/\b(19|20)\d{2}\b[^,\n]*/);
+    if(yearMatch) found['Release Date'] = yearMatch[0].trim();
+    else if(announcedRaw) found['Release Date'] = announcedRaw.split(',')[0].trim();
+  }
+
+  const keysFound = Object.keys(found).filter(k => found[k]);
+  if(keysFound.length === 0){
+    statusEl.innerHTML = `<span style="color:var(--price-up);">${currentLang === 'bn' ? 'কোনো স্পেক সনাক্ত করা যায়নি। ফরম্যাট মিলছে না — ম্যানুয়ালি যুক্ত করুন।' : "No specs detected. Format didn't match — please add manually."}</span>`;
+    return;
+  }
+
+  // বিদ্যমান খালি spec ফিল্ডগুলো সরিয়ে নতুন পাওয়া স্পেক যুক্ত করা হচ্ছে; আগে থেকে ভরা ফিল্ড অক্ষত থাকবে
+  const existingKeys = [...document.querySelectorAll('.spec-key-field')].map(el => el.value.trim().toLowerCase());
+  keysFound.forEach(key => {
+    if(!existingKeys.includes(key.toLowerCase())){
+      addSpecField(key, found[key]);
+    }
+  });
+  // শুরুর খালি row (যদি থাকে) সরিয়ে দেওয়া হচ্ছে
+  document.querySelectorAll('#pSpecsList .dyn-row').forEach(row => {
+    const k = row.querySelector('.spec-key-field').value.trim();
+    const v = row.querySelector('.spec-val-field').value.trim();
+    if(!k && !v) row.remove();
+  });
+
+  statusEl.innerHTML = `<span style="color:var(--green);">✓ ${keysFound.length} ${currentLang === 'bn' ? 'টি স্পেক যুক্ত হয়েছে — যাচাই করে নিন' : 'specs added — please review'}</span>`;
+}
+
 async function editProduct(id){
   const session = getSession();
   if(session && session.role === 'staff') return; // staff প্রোডাক্ট এডিট করতে পারবে না
@@ -1578,6 +1920,9 @@ async function editProduct(id){
   if(Object.keys(specs).length) Object.entries(specs).forEach(([k,v]) => addSpecField(k, v));
   else addSpecField();
 
+  document.getElementById('gsmaPasteArea').value = '';
+  document.getElementById('gsmaParseStatus').innerHTML = '';
+
   const { data: vids } = await sb.from('product_videos').select('*').eq('product_id', id);
   if(vids && vids.length) vids.forEach(v => addVideoField(v.title, v.video_url));
   else addVideoField();
@@ -1595,6 +1940,8 @@ function resetProductForm(){
   addImageField();
   addSpecField();
   addVideoField();
+  document.getElementById('gsmaPasteArea').value = '';
+  document.getElementById('gsmaParseStatus').innerHTML = '';
   document.getElementById('productFormTitle').innerHTML = '➕ <span lang-en>Add New Product</span><span lang-bn>নতুন প্রোডাক্ট যুক্ত করুন</span>';
   document.getElementById('cancelEditBtn').style.display = 'none';
 }
@@ -1952,7 +2299,13 @@ let allPrices = []; // loadAdminData থেকে সব প্রাইস ক�
 
 function populatePriceDropdowns(){
   const session = getSession();
-  document.getElementById('prProduct').innerHTML = allProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  document.getElementById('prProduct').innerHTML = allProducts.map(p => `<option value="${p.id}" data-brand="${p.brand||''}" data-name="${p.name.toLowerCase()}">${p.name}</option>`).join('');
+
+  const brandSelect = document.getElementById('prBrandFilter');
+  const currentBrandVal = brandSelect.value;
+  const brands = [...new Set(allProducts.map(p => p.brand).filter(Boolean))].sort();
+  brandSelect.innerHTML = '<option value="">All Brands</option>' + brands.map(b => `<option value="${b}">${b}</option>`).join('');
+  brandSelect.value = currentBrandVal;
 
   if(session && session.role === 'staff'){
     // Staff-এর জন্য শপ dropdown শুধু তার নিজের শপে লক করা, dropdown disabled
@@ -1965,6 +2318,27 @@ function populatePriceDropdowns(){
     document.getElementById('prStore').innerHTML = allStores.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
     document.getElementById('prStore').disabled = false;
   }
+}
+
+// Add New Price ফর্মে Brand ও নাম দিয়ে Product dropdown-এর অপশন লাইভ ফিল্টার করা
+function filterPriceProductOptions(){
+  const brandFilter = document.getElementById('prBrandFilter').value;
+  const nameQuery = document.getElementById('prProductSearch').value.trim().toLowerCase();
+  const select = document.getElementById('prProduct');
+  const previousVal = select.value;
+
+  const filtered = allProducts.filter(p => {
+    const brandMatch = !brandFilter || p.brand === brandFilter;
+    const nameMatch = !nameQuery || p.name.toLowerCase().includes(nameQuery);
+    return brandMatch && nameMatch;
+  });
+
+  select.innerHTML = filtered.length
+    ? filtered.map(p => `<option value="${p.id}" data-brand="${p.brand||''}">${p.name}</option>`).join('')
+    : '<option value="">No matching products</option>';
+
+  // আগের সিলেকশন এখনো ফিল্টার করা লিস্টে থাকলে সেটাই রাখা হবে, নাহলে প্রথম অপশন সিলেক্ট হবে
+  if(filtered.some(p => p.id === previousVal)) select.value = previousVal;
 }
 
 function renderPricesTable(list){
@@ -2014,6 +2388,10 @@ function editPrice(pr){
     return;
   }
   document.getElementById('priceEditId').value = pr.id;
+  // ফিল্টার রিসেট করে পুরো প্রোডাক্ট তালিকা ফিরিয়ে আনা হচ্ছে, যাতে এডিট করা প্রোডাক্টটা dropdown-এ থাকে
+  document.getElementById('prBrandFilter').value = '';
+  document.getElementById('prProductSearch').value = '';
+  filterPriceProductOptions();
   document.getElementById('prProduct').value = pr.product_id;
   if(!(session && session.role === 'staff')) document.getElementById('prStore').value = pr.store_id;
   document.getElementById('prPrice').value = pr.price;
@@ -2021,6 +2399,7 @@ function editPrice(pr){
   document.getElementById('prUrl').value = pr.product_url;
   document.getElementById('priceFormTitle').innerHTML = '✏️ <span lang-en>Edit Price</span><span lang-bn>দাম এডিট করুন</span>';
   document.getElementById('cancelPriceEditBtn').style.display = 'inline-block';
+  window.scrollTo({top:0, behavior:'smooth'});
 }
 
 function resetPriceForm(){
@@ -2028,6 +2407,9 @@ function resetPriceForm(){
   document.getElementById('prPrice').value = '';
   document.getElementById('prUrl').value = '';
   document.getElementById('prStock').value = 'true';
+  document.getElementById('prBrandFilter').value = '';
+  document.getElementById('prProductSearch').value = '';
+  filterPriceProductOptions();
   document.getElementById('priceFormTitle').innerHTML = '➕ <span lang-en>Add New Price</span><span lang-bn>নতুন দাম যুক্ত করুন</span>';
   document.getElementById('cancelPriceEditBtn').style.display = 'none';
 }
